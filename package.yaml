@@ -90,14 +90,21 @@ library:
     - time
     - yaml
 
+executables:
+  dbm-sqlite:
+    source-dirs: sqlite/app
+    ghc-options: -threaded -rtsopts "-with-rtsopts=-N"
+    main: Main.hs
+    dependencies:
+      - HDBC-sqlite3
+      - dbmigrations
+
 tests:
   spec:
     source-dirs: tests
     ghc-options: -threaded -rtsopts "-with-rtsopts=-N"
     main: Spec.hs
     dependencies:
-      - HDBC
-      - HDBC-sqlite3
       - containers
       - dbmigrations
       - directory
@@ -109,3 +116,13 @@ tests:
       - template-haskell
       - text
       - time
+
+  sqlite-spec:
+    source-dirs: sqlite/tests
+    ghc-options: -threaded -rtsopts "-with-rtsopts=-N"
+    main: Main.hs
+    dependencies:
+      - HDBC
+      - HDBC-sqlite3
+      - dbmigrations
+      - hspec

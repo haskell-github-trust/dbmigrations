@@ -197,9 +197,8 @@ makeBootstrappedBackend conn = do
 -- backend does not support that.
 needDDL :: BackendConnection bc => (bc -> Expectation) -> bc -> Expectation
 needDDL f conn
-  | supportsTransactionalDDL conn =
-      pendingWith "Skipping due to lack of Transactional DDL"
-  | otherwise = f conn
+  | supportsTransactionalDDL conn = f conn
+  | otherwise = pendingWith "Skipping due to lack of Transactional DDL"
 
 ignoreSqlExceptions_ :: BackendConnection bc => bc -> IO a -> IO ()
 ignoreSqlExceptions_ conn act = void act `catch` pure ()
