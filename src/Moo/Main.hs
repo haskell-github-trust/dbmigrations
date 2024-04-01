@@ -1,5 +1,6 @@
 module Moo.Main
-  ( mainWithParameters
+  ( hdbcMain
+  , mainWithParameters
   , ExecutableParameters (..)
   , Configuration (..)
   , Args
@@ -15,7 +16,8 @@ import Control.Monad (forM_, when)
 import Control.Monad.Reader (runReaderT)
 import Data.String.Conversions (cs)
 import Data.Text (Text)
-import Database.HDBC (SqlError, catchSql, seErrorMsg)
+import Database.HDBC (IConnection, SqlError, catchSql, seErrorMsg)
+import Database.Schema.Migrations.Backend.HDBC
 import Database.Schema.Migrations.Filesystem
   ( FilesystemStoreSettings (..)
   , filesystemStore
@@ -23,8 +25,8 @@ import Database.Schema.Migrations.Filesystem
 import Database.Schema.Migrations.Store
 import Moo.CommandInterface
 import Moo.Core
-import System.Environment (getProgName)
-import System.Exit (ExitCode (ExitFailure), exitWith)
+import System.Environment (getArgs, getProgName)
+import System.Exit
 
 type Args = [String]
 
@@ -102,3 +104,18 @@ reportSqlError :: SqlError -> IO a
 reportSqlError e = do
   putStrLn $ "\nA database error occurred: " <> seErrorMsg e
   exitWith (ExitFailure 1)
+
+hdbcMain :: IConnection conn => (String -> IO conn) -> IO ()
+hdbcMain connect = do
+  args <- getArgs
+  (_, opts, _) <- procArgs args
+  loadedConf <- loadConfiguration $ _configFilePath opts
+  case loadedConf of
+    Left e -> putStrLn e >> exitFailure
+    Right conf -> do
+      let connectionString = _connectionString conf
+      connection <- connect connectionString
+      let
+        backend = hdbcBackend connection
+        parameters = makeParameters conf backend
+      mainWithParameters args parameters

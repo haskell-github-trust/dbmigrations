@@ -1,3 +1,5 @@
 resolver: lts-22.14
 extra-deps:
   - HDBC-sqlite3-2.3.3.1
+  - HDBC-mysql-0.7.1.0
+  - HDBC-postgresql-2.5.0.1

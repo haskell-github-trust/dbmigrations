@@ -102,6 +102,28 @@ executables:
       - condition: ! "!(flag(sqlite))"
         buildable: false
 
+  # dbm-mysql:
+  #   source-dirs: mysql/app
+  #   ghc-options: -threaded -rtsopts "-with-rtsopts=-N"
+  #   main: Main.hs
+  #   dependencies:
+  #     - HDBC-mysql
+  #     - dbmigrations
+  #   when:
+  #     - condition: ! "!(flag(mysql))"
+  #       buildable: false
+
+  dbm-postgresql:
+    source-dirs: postgresql/app
+    ghc-options: -threaded -rtsopts "-with-rtsopts=-N"
+    main: Main.hs
+    dependencies:
+      - HDBC-postgresql
+      - dbmigrations
+    when:
+      - condition: ! "!(flag(postgresql))"
+        buildable: false
+
 tests:
   spec:
     source-dirs: tests
@@ -133,16 +155,42 @@ tests:
       - condition: ! "!(flag(sqlite))"
         buildable: false
 
+  # mysql-spec:
+  #   source-dirs: mysql/tests
+  #   ghc-options: -threaded -rtsopts "-with-rtsopts=-N"
+  #   main: Main.hs
+  #   dependencies:
+  #     - HDBC
+  #     - HDBC-mysql
+  #     - dbmigrations
+  #     - hspec
+  #   when:
+  #     - condition: ! "!(flag(mysql))"
+  #       buildable: false
+
+  postgresql-spec:
+    source-dirs: postgresql/tests
+    ghc-options: -threaded -rtsopts "-with-rtsopts=-N"
+    main: Main.hs
+    dependencies:
+      - HDBC
+      - HDBC-postgresql
+      - dbmigrations
+      - hspec
+    when:
+      - condition: ! "!(flag(postgresql))"
+        buildable: false
+
 flags:
   sqlite:
     description: Build the sqlite executable (and tests)
     manual: false
     default: false
 
-  mysql:
-    description: Build the mysql executable (and tests) application
-    manual: false
-    default: false
+  # mysql:
+  #   description: Build the mysql executable (and tests) application
+  #   manual: false
+  #   default: false
 
   postgresql:
     description: Build the postgresql executable (and tests) application

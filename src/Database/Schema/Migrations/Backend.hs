@@ -1,11 +1,13 @@
 module Database.Schema.Migrations.Backend
   ( Backend (..)
   , rootMigrationName
+  , bootstrapIfNecessary
   )
 where
 
 import Prelude
 
+import Control.Monad (unless)
 import Data.Text (Text)
 import Database.Schema.Migrations.Migration (Migration (..))
 
@@ -16,9 +18,9 @@ rootMigrationName :: Text
 rootMigrationName = "root"
 
 -- | A Backend represents a database engine backend such as MySQL or
---  SQLite.  A Backend supplies relatively low-level functions for
+--  SQLite. A Backend supplies relatively low-level functions for
 --  inspecting the backend's state, applying migrations, and reverting
---  migrations.  A Backend also supplies the migration necessary to
+--  migrations. A Backend also supplies the migration necessary to
 --  "bootstrap" a backend so that it can track which migrations are
 --  installed.
 data Backend = Backend
@@ -67,3 +69,11 @@ data Backend = Backend
 
 instance Show Backend where
   show _ = "dbmigrations backend"
+
+bootstrapIfNecessary :: Backend -> IO ()
+bootstrapIfNecessary backend = do
+  x <- isBootstrapped backend
+
+  unless x $ do
+    bs <- getBootstrapMigration backend
+    applyMigration backend bs

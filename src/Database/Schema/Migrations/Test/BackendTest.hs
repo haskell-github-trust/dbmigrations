@@ -32,31 +32,18 @@ module Database.Schema.Migrations.Test.BackendTest
 
 import Prelude
 
+import Control.Exception (SomeException, catch)
 import Control.Monad (void)
 import Data.ByteString (ByteString)
-import Database.Schema.Migrations.Backend (Backend (..))
+import Database.Schema.Migrations.Backend (Backend (..), bootstrapIfNecessary)
 import Database.Schema.Migrations.Migration (Migration (..), newMigration)
 import Test.Hspec
 
--- | A typeclass for database connections that needs to implemented for each
--- specific database type to use this test.
 class BackendConnection c where
-  -- | Whether this backend supports transactional DDL; if it doesn't,
-  -- we'll skip any tests that rely on that behavior.
   supportsTransactionalDDL :: c -> Bool
-
-  -- | Commits the current transaction.
-  commit :: c -> IO ()
-
-  -- | Executes an IO action inside a transaction.
   withTransaction :: c -> (c -> IO a) -> IO a
-
-  -- | Retrieves a list of all tables in the current database/scheme.
   getTables :: c -> IO [ByteString]
-
-  catchAll :: c -> (IO a -> IO a -> IO a)
-
-  -- | Returns a backend instance.
+  dropTables :: c -> IO ()
   makeBackend :: c -> Backend
 
 spec :: BackendConnection bc => SpecWith bc
@@ -88,7 +75,7 @@ spec = do
           { mApply = "INVALID SQL"
           }
 
-    ignoreSqlExceptions_ conn $ withTransaction conn $ \conn' -> do
+    ignoreAny $ withTransaction conn $ \conn' -> do
       let backend' = makeBackend conn'
       applyMigration backend' m1
       applyMigration backend' m2
@@ -136,7 +123,7 @@ spec = do
 
       -- Revert the migrations, ignore exceptions; the revert will fail, but
       -- withTransaction will roll back.
-      ignoreSqlExceptions_ conn $ withTransaction conn $ \conn' -> do
+      ignoreAny $ withTransaction conn $ \conn' -> do
         let backend' = makeBackend conn'
         revertMigration backend' m2
         revertMigration backend' m1
@@ -192,8 +179,7 @@ spec = do
 makeBootstrappedBackend :: BackendConnection bc => bc -> IO Backend
 makeBootstrappedBackend conn = do
   let backend = makeBackend conn
-  bs <- getBootstrapMigration backend
-  backend <$ applyMigration backend bs
+  backend <$ bootstrapIfNecessary backend
 
 -- | Wrap a spec that requires transactional DDL and mark it pending if the
 -- backend does not support that.
@@ -202,7 +188,5 @@ needDDL f conn
   | supportsTransactionalDDL conn = f conn
   | otherwise = pendingWith "Skipping due to lack of Transactional DDL"
 
-ignoreSqlExceptions_ :: BackendConnection bc => bc -> IO a -> IO ()
-ignoreSqlExceptions_ conn act = void act `catch` pure ()
- where
-  catch = catchAll conn
+ignoreAny :: IO a -> IO ()
+ignoreAny act = void act `catch` \(_ :: SomeException) -> pure ()

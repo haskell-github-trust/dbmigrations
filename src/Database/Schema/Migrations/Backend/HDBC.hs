@@ -6,14 +6,13 @@ where
 
 import Prelude
 
-import Control.Exception (catch)
 import Control.Monad (void)
+import Data.Foldable (traverse_)
 import Data.String.Conversions (cs)
 import Data.Text (Text)
 import Data.Time.Clock (getCurrentTime)
 import Database.HDBC
   ( IConnection (getTables, run, runRaw)
-  , SqlError
   , commit
   , disconnect
   , fromSql
@@ -83,9 +82,10 @@ newtype HDBCConnection a = HDBCConnection a
 
 instance IConnection a => BackendTest.BackendConnection (HDBCConnection a) where
   supportsTransactionalDDL = const True
-  makeBackend (HDBCConnection c) = hdbcBackend c
-  commit (HDBCConnection c) = commit c
   withTransaction (HDBCConnection c) transaction =
     withTransaction c (transaction . HDBCConnection)
   getTables (HDBCConnection c) = map cs <$> getTables c
-  catchAll (HDBCConnection _) act handler = act `catch` \(_ :: SqlError) -> handler
+  dropTables (HDBCConnection c) = do
+    ts <- getTables c
+    traverse_ (\t -> runRaw c (cs $ "DROP TABLE " <> t)) ts
+  makeBackend (HDBCConnection c) = hdbcBackend c

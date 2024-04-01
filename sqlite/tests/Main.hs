@@ -15,7 +15,7 @@ import Test.Hspec
 deriving via (HDBCConnection Connection) instance BackendConnection Connection
 
 main :: IO ()
-main =
-  hspec
-    . before (connectSqlite3 ":memory:")
-    $ after disconnect BackendTest.spec
+main = hspec $ before setupSQLite3 $ after disconnect BackendTest.spec
+
+setupSQLite3 :: IO Connection
+setupSQLite3 = connectSqlite3 ":memory:"

@@ -46,11 +46,6 @@ source-repository head
   type: git
   location: https://github.com/haskell-github-trust/dbmigrations
 
-flag mysql
-  description: Build the mysql executable (and tests) application
-  manual: False
-  default: False
-
 flag postgresql
   description: Build the postgresql executable (and tests) application
   manual: False
@@ -129,6 +124,49 @@ library
   if impl(ghc >= 8.10)
     ghc-options: -Wno-missing-safe-haskell-mode
 
+executable dbm-postgresql
+  main-is: Main.hs
+  other-modules:
+      Paths_dbmigrations
+  hs-source-dirs:
+      postgresql/app
+  default-extensions:
+      BangPatterns
+      DataKinds
+      DeriveAnyClass
+      DeriveFoldable
+      DeriveFunctor
+      DeriveGeneric
+      DeriveLift
+      DeriveTraversable
+      DerivingStrategies
+      FlexibleContexts
+      FlexibleInstances
+      GADTs
+      GeneralizedNewtypeDeriving
+      LambdaCase
+      MultiParamTypeClasses
+      NoImplicitPrelude
+      NoMonomorphismRestriction
+      OverloadedStrings
+      RankNTypes
+      ScopedTypeVariables
+      StandaloneDeriving
+      TypeApplications
+      TypeFamilies
+  ghc-options: -fwrite-ide-info -Weverything -Wno-all-missed-specialisations -Wno-missed-specialisations -Wno-missing-exported-signatures -Wno-missing-import-lists -Wno-missing-local-signatures -Wno-monomorphism-restriction -Wno-safe -Wno-unsafe -threaded -rtsopts "-with-rtsopts=-N"
+  build-depends:
+      HDBC-postgresql
+    , base <5
+    , dbmigrations
+  default-language: GHC2021
+  if impl(ghc >= 9.2)
+    ghc-options: -Wno-missing-kind-signatures
+  if impl(ghc >= 8.10)
+    ghc-options: -Wno-missing-safe-haskell-mode
+  if !(flag(postgresql))
+    buildable: False
+
 executable dbm-sqlite
   main-is: Main.hs
   other-modules:
@@ -170,6 +208,52 @@ executable dbm-sqlite
   if impl(ghc >= 8.10)
     ghc-options: -Wno-missing-safe-haskell-mode
   if !(flag(sqlite))
+    buildable: False
+
+test-suite postgresql-spec
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      Paths_dbmigrations
+  hs-source-dirs:
+      postgresql/tests
+  default-extensions:
+      BangPatterns
+      DataKinds
+      DeriveAnyClass
+      DeriveFoldable
+      DeriveFunctor
+      DeriveGeneric
+      DeriveLift
+      DeriveTraversable
+      DerivingStrategies
+      FlexibleContexts
+      FlexibleInstances
+      GADTs
+      GeneralizedNewtypeDeriving
+      LambdaCase
+      MultiParamTypeClasses
+      NoImplicitPrelude
+      NoMonomorphismRestriction
+      OverloadedStrings
+      RankNTypes
+      ScopedTypeVariables
+      StandaloneDeriving
+      TypeApplications
+      TypeFamilies
+  ghc-options: -fwrite-ide-info -Weverything -Wno-all-missed-specialisations -Wno-missed-specialisations -Wno-missing-exported-signatures -Wno-missing-import-lists -Wno-missing-local-signatures -Wno-monomorphism-restriction -Wno-safe -Wno-unsafe -threaded -rtsopts "-with-rtsopts=-N"
+  build-depends:
+      HDBC
+    , HDBC-postgresql
+    , base <5
+    , dbmigrations
+    , hspec
+  default-language: GHC2021
+  if impl(ghc >= 9.2)
+    ghc-options: -Wno-missing-kind-signatures
+  if impl(ghc >= 8.10)
+    ghc-options: -Wno-missing-safe-haskell-mode
+  if !(flag(postgresql))
     buildable: False
 
 test-suite spec
