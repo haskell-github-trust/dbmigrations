@@ -1,9 +1,3 @@
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-
 -- | This module provides a type for interacting with a
 --  filesystem-backed 'MigrationStore'.
 module Database.Schema.Migrations.Filesystem
@@ -16,36 +10,31 @@ where
 
 import Prelude
 
-import qualified Data.ByteString.Char8 as BSC
-import Data.String.Conversions (cs, (<>))
-import Data.Text (Text)
-import qualified Data.Text as T
-import System.Directory (doesFileExist, getDirectoryContents)
-import System.FilePath (dropExtension, takeBaseName, takeExtension, (</>))
-
-import qualified Data.Map as Map
-import Data.Time (defaultTimeLocale, formatTime, parseTimeM)
-import Data.Time.Clock (UTCTime)
-import Data.Typeable (Typeable)
-
 import Control.Exception (Exception (..), catch, throw)
 import Control.Monad (filterM)
-
 import Data.Aeson
 import Data.Aeson.Types (typeMismatch)
-import qualified Data.Yaml as Yaml
-import GHC.Generics (Generic)
-
+import Data.ByteString.Char8 qualified as BSC
+import Data.String.Conversions (cs)
+import Data.Text (Text)
+import Data.Text qualified as T
+import Data.Time (defaultTimeLocale, formatTime, parseTimeM)
+import Data.Time.Clock (UTCTime)
+import Data.Yaml qualified as Yaml
 import Database.Schema.Migrations.Filesystem.Serialize
 import Database.Schema.Migrations.Migration (Migration (..))
 import Database.Schema.Migrations.Store
+import GHC.Generics (Generic)
+import System.Directory (doesFileExist, getDirectoryContents)
+import System.FilePath (dropExtension, takeBaseName, takeExtension, (</>))
 
-data FilesystemStoreSettings = FSStore {storePath :: FilePath}
+newtype FilesystemStoreSettings = FSStore
+  { storePath :: FilePath
+  }
 
-data FilesystemStoreError = FilesystemStoreError String
-  deriving (Show, Typeable)
-
-instance Exception FilesystemStoreError
+newtype FilesystemStoreError = FilesystemStoreError String
+  deriving stock (Show)
+  deriving anyclass (Exception)
 
 throwFS :: String -> a
 throwFS = throw . FilesystemStoreError
@@ -60,14 +49,14 @@ filesystemStore :: FilesystemStoreSettings -> MigrationStore
 filesystemStore s =
   MigrationStore
     { fullMigrationName = fmap addNewMigrationExtension . fsFullMigrationName s
-    , loadMigration = \theId -> migrationFromFile s theId
+    , loadMigration = migrationFromFile s
     , getMigrations = do
         contents <- getDirectoryContents $ storePath s
         let
           migrationFilenames = [f | f <- contents, isMigrationFilename f]
           fullPaths = [(f, storePath s </> f) | f <- migrationFilenames]
         existing <- filterM (\(_, full) -> doesFileExist full) fullPaths
-        return [cs $ dropExtension short | (short, _) <- existing]
+        pure [cs $ dropExtension short | (short, _) <- existing]
     , saveMigration = \m -> do
         filename <- fsFullMigrationName s $ mId m
         BSC.writeFile (cs $ addNewMigrationExtension filename) $ serializeMigration m
@@ -81,10 +70,10 @@ addMigrationExtension path ext = path <> ext
 
 -- | Build path to migrations without extension.
 fsFullMigrationName :: FilesystemStoreSettings -> Text -> IO FilePath
-fsFullMigrationName s name = return $ storePath s </> cs name
+fsFullMigrationName s name = pure $ storePath s </> cs name
 
 isMigrationFilename :: String -> Bool
-isMigrationFilename path = (cs $ takeExtension path) `elem` [filenameExtension, filenameExtensionTxt]
+isMigrationFilename path = cs (takeExtension path) `elem` [filenameExtension, filenameExtensionTxt]
 
 -- | Given a store and migration name, read and parse the associated
 --  migration and return the migration if successful.  Otherwise return
@@ -95,13 +84,13 @@ migrationFromFile store name =
   fsFullMigrationName store (cs name) >>= migrationFromPath
 
 -- | Given a filesystem path, read and parse the file as a migration
---  return the 'Migration' if successful.  Otherwise return a parsing
+--  pure the 'Migration' if successful.  Otherwise pure a parsing
 --  error message.
 migrationFromPath :: FilePath -> IO (Either String Migration)
 migrationFromPath path = do
   let name = cs $ takeBaseName path
   (Right <$> process name)
-    `catch` ( \(FilesystemStoreError s) -> return $ Left $ "Could not parse migration " ++ path ++ ":" ++ s
+    `catch` ( \(FilesystemStoreError s) -> pure $ Left $ "Could not parse migration " <> path <> ":" <> s
             )
  where
   readMigrationFile = do
@@ -124,7 +113,7 @@ data MigrationYaml = MigrationYaml
   , myRevert :: Maybe Text
   , myDepends :: DependsYaml
   }
-  deriving (Generic)
+  deriving stock (Generic)
 
 instance FromJSON MigrationYaml where
   parseJSON = genericParseJSON jsonOptions

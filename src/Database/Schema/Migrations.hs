@@ -9,19 +9,18 @@ module Database.Schema.Migrations
   )
 where
 
-import Data.Maybe (catMaybes)
-import qualified Data.Set as Set
-import Data.Text (Text)
+import Prelude
 
-import qualified Database.Schema.Migrations.Backend as B
+import Data.Maybe (mapMaybe)
+import Data.Set qualified as Set
+import Data.Text (Text)
+import Database.Schema.Migrations.Backend qualified as B
 import Database.Schema.Migrations.Dependencies
   ( dependencies
   , reverseDependencies
   )
-import Database.Schema.Migrations.Migration
-  ( Migration (..)
-  )
-import qualified Database.Schema.Migrations.Store as S
+import Database.Schema.Migrations.Migration (Migration (..))
+import Database.Schema.Migrations.Store qualified as S
 
 -- | Given a 'B.Backend' and a 'S.MigrationMap', query the backend and
 --  return a list of migration names which are available in the
@@ -31,7 +30,7 @@ missingMigrations backend storeData = do
   let storeMigrationNames = map mId $ S.storeMigrations storeData
   backendMigrations <- B.getMigrations backend
 
-  return $
+  pure $
     Set.toList $
       Set.difference
         (Set.fromList storeMigrationNames)
@@ -46,13 +45,18 @@ createNewMigration
   -> IO (Either String Migration)
 createNewMigration store newM = do
   available <- S.getMigrations store
-  case mId newM `elem` available of
-    True -> do
-      fullPath <- S.fullMigrationName store (mId newM)
-      return $ Left $ "Migration " ++ (show fullPath) ++ " already exists"
-    False -> do
-      S.saveMigration store newM
-      return $ Right newM
+  ( if mId newM `elem` available
+      then
+        ( do
+            fullPath <- S.fullMigrationName store (mId newM)
+            pure $ Left $ "Migration " <> show fullPath <> " already exists"
+        )
+      else
+        ( do
+            S.saveMigration store newM
+            pure $ Right newM
+        )
+    )
 
 -- | Given a 'B.Backend', ensure that the backend is ready for use by
 --  bootstrapping it.  This entails installing the appropriate database
@@ -61,9 +65,10 @@ createNewMigration store newM = do
 ensureBootstrappedBackend :: B.Backend -> IO ()
 ensureBootstrappedBackend backend = do
   bsStatus <- B.isBootstrapped backend
-  case bsStatus of
-    True -> return ()
-    False -> B.getBootstrapMigration backend >>= B.applyMigration backend
+  ( if bsStatus
+      then pure ()
+      else B.getBootstrapMigration backend >>= B.applyMigration backend
+    )
 
 -- | Given a migration mapping computed from a MigrationStore, a
 --  backend, and a migration to apply, return a list of migrations to
@@ -79,11 +84,11 @@ migrationsToApply storeData backend migration = do
   allMissing <- missingMigrations backend storeData
 
   let
-    deps = (dependencies graph $ mId migration) ++ [mId migration]
+    deps = dependencies graph (mId migration) <> [mId migration]
     namesToInstall = [e | e <- deps, e `elem` allMissing]
-    loadedMigrations = catMaybes $ map (S.storeLookup storeData) namesToInstall
+    loadedMigrations = mapMaybe (S.storeLookup storeData) namesToInstall
 
-  return loadedMigrations
+  pure loadedMigrations
 
 -- | Given a migration mapping computed from a MigrationStore, a
 --  backend, and a migration to revert, return a list of migrations to
@@ -99,8 +104,8 @@ migrationsToRevert storeData backend migration = do
   allInstalled <- B.getMigrations backend
 
   let
-    rDeps = (reverseDependencies graph $ mId migration) ++ [mId migration]
+    rDeps = reverseDependencies graph (mId migration) <> [mId migration]
     namesToRevert = [e | e <- rDeps, e `elem` allInstalled]
-    loadedMigrations = catMaybes $ map (S.storeLookup storeData) namesToRevert
+    loadedMigrations = mapMaybe (S.storeLookup storeData) namesToRevert
 
-  return loadedMigrations
+  pure loadedMigrations

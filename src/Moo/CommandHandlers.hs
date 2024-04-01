@@ -1,24 +1,32 @@
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
-module Moo.CommandHandlers where
+module Moo.CommandHandlers
+  ( newCommand
+  , upgradeCommand
+  , upgradeListCommand
+  , reinstallCommand
+  , listCommand
+  , applyCommand
+  , revertCommand
+  , testCommand
+  )
+where
 
-import Data.String.Conversions (cs, (<>))
+import Prelude
 
-import Control.Monad (forM_, when)
+import Control.Monad (forM_, unless, when)
 import Control.Monad.Reader (asks)
 import Control.Monad.Trans (liftIO)
 import Data.Maybe (isJust)
-import qualified Data.Time.Clock as Clock
-import Moo.CommandUtils
-import Moo.Core
-import System.Exit (ExitCode (..), exitSuccess, exitWith)
-
+import Data.String.Conversions (cs)
+import Data.Time.Clock qualified as Clock
 import Database.Schema.Migrations
 import Database.Schema.Migrations.Backend
 import Database.Schema.Migrations.Migration
 import Database.Schema.Migrations.Store hiding (getMigrations)
+import Moo.CommandUtils
+import Moo.Core
+import System.Exit (ExitCode (..), exitSuccess, exitWith)
 
 newCommand :: CommandHandler
 newCommand storeData = do
@@ -32,22 +40,22 @@ newCommand storeData = do
         if timestamp
           then fmap (timeString <>) required
           else required
-  noAsk <- _noAsk <$> asks _appOptions
+  noAsk <- asks (_noAsk . _appOptions)
 
   liftIO $ do
     fullPath <- fullMigrationName store migrationId
     when (isJust $ storeLookup storeData migrationId) $
       do
-        putStrLn $ "Migration " <> (show fullPath) ++ " already exists"
+        putStrLn $ "Migration " <> show fullPath <> " already exists"
         exitWith (ExitFailure 1)
 
     -- Default behavior: ask for dependencies if linear mode is disabled
     deps <-
       if linear
-        then (return $ leafMigrations storeData)
+        then pure $ leafMigrations storeData
         else
           if noAsk
-            then (return [])
+            then pure []
             else do
               putStrLn . cs $
                 "Selecting dependencies for new \
@@ -57,31 +65,35 @@ newCommand storeData = do
 
     result <-
       if noAsk
-        then (return True)
-        else
-          (confirmCreation migrationId deps)
+        then pure True
+        else confirmCreation migrationId deps
 
-    case result of
-      True -> do
-        now <- Clock.getCurrentTime
-        status <-
-          createNewMigration store $
-            (newMigration migrationId)
-              { mDeps = deps
-              , mTimestamp = Just now
-              }
-        case status of
-          Left e -> putStrLn e >> (exitWith (ExitFailure 1))
-          Right _ ->
-            putStrLn $
-              "Migration created successfully: "
-                ++ show fullPath
-      False -> do
-        putStrLn "Migration creation cancelled."
+    ( if result
+        then
+          ( do
+              now <- Clock.getCurrentTime
+              status <-
+                createNewMigration store $
+                  (newMigration migrationId)
+                    { mDeps = deps
+                    , mTimestamp = Just now
+                    }
+              case status of
+                Left e -> putStrLn e >> exitWith (ExitFailure 1)
+                Right _ ->
+                  putStrLn $
+                    "Migration created successfully: "
+                      <> show fullPath
+          )
+        else
+          ( do
+              putStrLn "Migration creation cancelled."
+          )
+      )
 
 upgradeCommand :: CommandHandler
 upgradeCommand storeData = do
-  isTesting <- _test <$> asks _appOptions
+  isTesting <- asks (_test . _appOptions)
   withBackend $ \backend -> do
     ensureBootstrappedBackend backend >> commitBackend backend
     migrationNames <- missingMigrations backend storeData
@@ -91,13 +103,18 @@ upgradeCommand storeData = do
     forM_ migrationNames $ \migrationName -> do
       m <- lookupMigration storeData migrationName
       apply m storeData backend False
-    case isTesting of
-      True -> do
-        rollbackBackend backend
-        putStrLn "Upgrade test successful."
-      False -> do
-        commitBackend backend
-        putStrLn "Database successfully upgraded."
+    ( if isTesting
+        then
+          ( do
+              rollbackBackend backend
+              putStrLn "Upgrade test successful."
+          )
+        else
+          ( do
+              commitBackend backend
+              putStrLn "Database successfully upgraded."
+          )
+      )
 
 upgradeListCommand :: CommandHandler
 upgradeListCommand storeData = do
@@ -112,7 +129,7 @@ upgradeListCommand storeData = do
 
 reinstallCommand :: CommandHandler
 reinstallCommand storeData = do
-  isTesting <- _test <$> asks _appOptions
+  isTesting <- asks (_test . _appOptions)
   required <- asks _appRequiredArgs
   let [migrationId] = required
 
@@ -123,13 +140,18 @@ reinstallCommand storeData = do
     _ <- revert m storeData backend
     _ <- apply m storeData backend True
 
-    case isTesting of
-      False -> do
-        commitBackend backend
-        putStrLn "Migration successfully reinstalled."
-      True -> do
-        rollbackBackend backend
-        putStrLn "Reinstall test successful."
+    ( if isTesting
+        then
+          ( do
+              rollbackBackend backend
+              putStrLn "Reinstall test successful."
+          )
+        else
+          ( do
+              commitBackend backend
+              putStrLn "Migration successfully reinstalled."
+          )
+      )
 
 listCommand :: CommandHandler
 listCommand _ = do
@@ -137,11 +159,11 @@ listCommand _ = do
     ensureBootstrappedBackend backend >> commitBackend backend
     ms <- getMigrations backend
     forM_ ms $ \m ->
-      when (not $ m == rootMigrationName) $ putStrLn . cs $ m
+      unless (m == rootMigrationName) $ putStrLn . cs $ m
 
 applyCommand :: CommandHandler
 applyCommand storeData = do
-  isTesting <- _test <$> asks _appOptions
+  isTesting <- asks (_test . _appOptions)
   required <- asks _appRequiredArgs
   let [migrationId] = required
 
@@ -149,17 +171,22 @@ applyCommand storeData = do
     ensureBootstrappedBackend backend >> commitBackend backend
     m <- lookupMigration storeData migrationId
     _ <- apply m storeData backend True
-    case isTesting of
-      False -> do
-        commitBackend backend
-        putStrLn "Successfully applied migrations."
-      True -> do
-        rollbackBackend backend
-        putStrLn "Migration installation test successful."
+    ( if isTesting
+        then
+          ( do
+              rollbackBackend backend
+              putStrLn "Migration installation test successful."
+          )
+        else
+          ( do
+              commitBackend backend
+              putStrLn "Successfully applied migrations."
+          )
+      )
 
 revertCommand :: CommandHandler
 revertCommand storeData = do
-  isTesting <- _test <$> asks _appOptions
+  isTesting <- asks (_test . _appOptions)
   required <- asks _appRequiredArgs
   let [migrationId] = required
 
@@ -168,13 +195,18 @@ revertCommand storeData = do
     m <- lookupMigration storeData migrationId
     _ <- revert m storeData backend
 
-    case isTesting of
-      False -> do
-        commitBackend backend
-        putStrLn "Successfully reverted migrations."
-      True -> do
-        rollbackBackend backend
-        putStrLn "Migration uninstallation test successful."
+    ( if isTesting
+        then
+          ( do
+              rollbackBackend backend
+              putStrLn "Migration uninstallation test successful."
+          )
+        else
+          ( do
+              commitBackend backend
+              putStrLn "Successfully reverted migrations."
+          )
+      )
 
 testCommand :: CommandHandler
 testCommand storeData = do
@@ -187,10 +219,10 @@ testCommand storeData = do
     migrationNames <- missingMigrations backend storeData
     -- If the migration is already installed, remove it as part of
     -- the test
-    when (not $ migrationId `elem` migrationNames) $
+    unless (migrationId `elem` migrationNames) $
       do
         _ <- revert m storeData backend
-        return ()
+        pure ()
     applied <- apply m storeData backend True
     forM_ (reverse applied) $ \migration -> do
       revert migration storeData backend

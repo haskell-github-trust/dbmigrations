@@ -1,0 +1,111 @@
+name: dbmigrations
+version: 2.1.0
+synopsis: An implementation of relational database "migrations"
+description: Please see <https://github.com/haskell-github-trust/dbmigrations#readme>
+author: "Jonathan Daugherty <cygnus@foobox.com>"
+maintainer: "Pat Brisbin <pbrisbin@gmail.com>"
+category: Database
+github: haskell-github-trust/dbmigrations
+license: BSD3
+license-file: LICENSE
+
+extra-doc-files:
+  - README.md
+  - CHANGELOG.md
+
+extra-source-files:
+  - tests/example_store/*
+  - tests/config_loading/*
+  - tests/migration_parsing/*
+
+ghc-options:
+  - -fwrite-ide-info
+  - -Weverything
+  - -Wno-all-missed-specialisations
+  - -Wno-missed-specialisations
+  - -Wno-missing-exported-signatures # re-enables missing-signatures
+  - -Wno-missing-import-lists
+  - -Wno-missing-local-signatures
+  - -Wno-monomorphism-restriction
+  - -Wno-safe
+  - -Wno-unsafe
+
+when:
+  - condition: "impl(ghc >= 9.2)"
+    ghc-options:
+      - -Wno-missing-kind-signatures
+  - condition: "impl(ghc >= 8.10)"
+    ghc-options:
+      - -Wno-missing-safe-haskell-mode
+
+dependencies:
+  - base < 5
+
+language: GHC2021
+default-extensions:
+  - BangPatterns
+  - DataKinds
+  - DeriveAnyClass
+  - DeriveFoldable
+  - DeriveFunctor
+  - DeriveGeneric
+  - DeriveLift
+  - DeriveTraversable
+  - DerivingStrategies
+  - FlexibleContexts
+  - FlexibleInstances
+  - GADTs
+  - GeneralizedNewtypeDeriving
+  - LambdaCase
+  - MultiParamTypeClasses
+  - NoImplicitPrelude
+  - NoMonomorphismRestriction
+  - OverloadedStrings
+  - RankNTypes
+  - ScopedTypeVariables
+  - StandaloneDeriving
+  - TypeApplications
+  - TypeFamilies
+
+  # Soon after
+  # - DuplicateRecordFields
+  # - NoFieldSelectors
+  # - OverloadedRecordDot
+
+library:
+  source-dirs: src
+  dependencies:
+    - HDBC
+    - aeson
+    - bytestring
+    - configurator
+    - containers
+    - directory
+    - fgl
+    - filepath
+    - hspec
+    - mtl
+    - string-conversions
+    - text
+    - time
+    - yaml
+
+tests:
+  spec:
+    source-dirs: tests
+    ghc-options: -threaded -rtsopts "-with-rtsopts=-N"
+    main: Spec.hs
+    dependencies:
+      - HDBC
+      - HDBC-sqlite3
+      - containers
+      - dbmigrations
+      - directory
+      - fgl
+      - filepath
+      - hspec
+      - mtl
+      - string-conversions
+      - template-haskell
+      - text
+      - time

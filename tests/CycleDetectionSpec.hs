@@ -1,16 +1,42 @@
-module CycleDetectionTest
-  ( tests
+module CycleDetectionSpec
+  ( spec
   )
 where
 
+import Prelude
+
+import Data.Foldable (for_)
 import Data.Graph.Inductive.Graph (mkGraph)
 import Data.Graph.Inductive.PatriciaTree (Gr)
-import Test.HUnit
-
 import Database.Schema.Migrations.CycleDetection
+import Test.Hspec
 
-tests :: [Test]
-tests = mkCycleTests
+spec :: Spec
+spec = do
+  describe "hasCycle" $ do
+    for_ cycleTests $ \(name, g, expected) -> do
+      let msg =
+            "determines "
+              <> (if expected then "cycles" else "no cycles")
+              <> " for the "
+              <> name
+              <> " example"
+
+      it msg $ hasCycle g `shouldBe` expected
+
+type CycleTestCase = (String, Gr String String, Bool)
+
+cycleTests :: [CycleTestCase]
+cycleTests =
+  [ ("empty", noCyclesEmpty, False)
+  , ("simple", noCycles, False)
+  , ("radial without cycle", noCycleRadial, False)
+  , ("simple", withCycleSimple, True)
+  , ("complex", withCycleComplex, True)
+  , ("radial with cycle", withCycleRadial, True)
+  , ("no directed", noDirectedCycle1, False)
+  , ("no directed (2)", noDirectedCycle2, False)
+  ]
 
 noCycles :: Gr String String
 noCycles = mkGraph [(1, "one"), (2, "two")] [(1, 2, "one->two")]
@@ -63,22 +89,3 @@ noDirectedCycle2 =
     , (3, 5, "test2->test1")
     , (4, 3, "test3->test2")
     ]
-
-type CycleTestCase = (Gr String String, Bool)
-
-cycleTests :: [CycleTestCase]
-cycleTests =
-  [ (noCyclesEmpty, False)
-  , (noCycles, False)
-  , (noCycleRadial, False)
-  , (withCycleSimple, True)
-  , (withCycleComplex, True)
-  , (withCycleRadial, True)
-  , (noDirectedCycle1, False)
-  , (noDirectedCycle2, False)
-  ]
-
-mkCycleTests :: [Test]
-mkCycleTests = map mkCycleTest cycleTests
- where
-  mkCycleTest (g, expected) = expected ~=? hasCycle g

@@ -1,5 +1,3 @@
-{-# LANGUAGE ExistentialQuantification #-}
-
 module Moo.Core
   ( AppT
   , CommandHandler
@@ -15,14 +13,15 @@ module Moo.Core
   , loadConfiguration
   ) where
 
-import Data.Text (Text)
+import Prelude
 
 import Control.Monad.Reader (ReaderT)
 import Data.Char (toLower)
-import qualified Data.Configurator as C
+import Data.Configurator qualified as C
 import Data.Configurator.Types (Config, Configured)
 import Data.Maybe (fromMaybe)
-import qualified Data.Text as T
+import Data.Text (Text)
+import Data.Text qualified as T
 import System.Environment (getEnvironment)
 
 import Database.Schema.Migrations.Backend
@@ -56,7 +55,7 @@ data LoadConfig = LoadConfig
   , _lcLinearMigrations :: Maybe Bool
   , _lcTimestampFilenames :: Maybe Bool
   }
-  deriving (Show)
+  deriving stock (Show)
 
 -- | Loading the configuration from a file or having it specified via environment
 --  |variables results in a value of type Configuration.
@@ -66,7 +65,7 @@ data Configuration = Configuration
   , _linearMigrations :: Bool
   , _timestampFilenames :: Bool
   }
-  deriving (Show)
+  deriving stock (Show)
 
 -- | A value of type ExecutableParameters is what a moo executable (moo-postgresql,
 --  |moo-mysql, etc.) pass to the core package when they want to execute a
@@ -77,7 +76,7 @@ data ExecutableParameters = ExecutableParameters
   , _parametersLinearMigrations :: Bool
   , _parametersTimestampFilenames :: Bool
   }
-  deriving (Show)
+  deriving stock (Show)
 
 defConfigFile :: String
 defConfigFile = "moo.cfg"
@@ -110,7 +109,7 @@ lcTimestampFilenames c v = c {_lcTimestampFilenames = v}
 (.=) :: Monad m => (a -> Maybe b -> a) -> m (Maybe b) -> m (a -> a)
 (.=) f v' = do
   v <- v'
-  return $ case v of
+  pure $ case v of
     Just _ -> flip f v
     _ -> id
 
@@ -123,23 +122,21 @@ infixl 2 &
 
 applyEnvironment :: ShellEnvironment -> LoadConfig -> IO LoadConfig
 applyEnvironment env lc =
-  return lc
+  pure lc
     & lcConnectionString
     .= f envDatabaseName
     & lcMigrationStorePath
     .= f envStoreName
     & lcLinearMigrations
     .= readFlag
-    <$> f envLinearMigrations
-      & lcTimestampFilenames
-      .= readFlag
+    <$> f envLinearMigrations & lcTimestampFilenames .= readFlag
     <$> f envTimestampFilenames
  where
-  f n = return $ lookup n env
+  f n = pure $ lookup n env
 
 applyConfigFile :: Config -> LoadConfig -> IO LoadConfig
 applyConfigFile cfg lc =
-  return lc
+  pure lc
     & lcConnectionString
     .= f envDatabaseName
     & lcMigrationStorePath
@@ -164,7 +161,7 @@ loadConfiguration pth = do
   env <- getEnvironment
   cfg <- applyConfigFile file newLoadConfig >>= applyEnvironment env
 
-  return $ validateLoadConfig cfg
+  pure $ validateLoadConfig cfg
 
 makeParameters :: Configuration -> Backend -> ExecutableParameters
 makeParameters conf backend =

@@ -1,6 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedStrings #-}
-
 module Moo.CommandUtils
   ( apply
   , confirmCreation
@@ -11,27 +8,19 @@ module Moo.CommandUtils
   , getCurrentTimestamp
   ) where
 
-import Data.String.Conversions (cs, (<>))
-import Data.Text (Text)
-import qualified Data.Text as T
+import Prelude
 
 import Control.Exception (finally)
 import Control.Monad (forM_, unless, when)
 import Control.Monad.Reader (asks)
 import Control.Monad.Trans (liftIO)
+import Data.Foldable (for_)
 import Data.List (intercalate, isPrefixOf, sortBy)
 import Data.Maybe (fromJust, isJust)
+import Data.String.Conversions (cs)
+import Data.Text (Text)
+import Data.Text qualified as T
 import Data.Time.Clock (getCurrentTime)
-import System.Exit (ExitCode (..), exitWith)
-import System.IO
-  ( BufferMode (..)
-  , hFlush
-  , hGetBuffering
-  , hSetBuffering
-  , stdin
-  , stdout
-  )
-
 import Database.Schema.Migrations (migrationsToApply, migrationsToRevert)
 import Database.Schema.Migrations.Backend (Backend (..))
 import Database.Schema.Migrations.Migration (Migration (..))
@@ -41,6 +30,15 @@ import Database.Schema.Migrations.Store
   , storeMigrations
   )
 import Moo.Core
+import System.Exit (ExitCode (..), exitWith)
+import System.IO
+  ( BufferMode (..)
+  , hFlush
+  , hGetBuffering
+  , hSetBuffering
+  , stdin
+  , stdout
+  )
 
 getCurrentTimestamp :: IO Text
 getCurrentTimestamp =
@@ -53,10 +51,8 @@ apply m storeData backend complain = do
 
   -- Apply them
   if null toApply
-    then
-      nothingToDo >> return []
-    else
-      mapM_ (applyIt backend) toApply >> return toApply
+    then nothingToDo >> pure []
+    else mapM_ (applyIt backend) toApply >> pure toApply
  where
   nothingToDo =
     when complain $
@@ -77,10 +73,8 @@ revert m storeData backend = do
 
   -- Revert them
   if null toRevert
-    then
-      nothingToDo >> return []
-    else
-      mapM_ (revertIt backend) toRevert >> return toRevert
+    then nothingToDo >> pure []
+    else mapM_ (revertIt backend) toRevert >> pure toRevert
  where
   nothingToDo =
     putStrLn . cs $
@@ -100,7 +94,7 @@ lookupMigration storeData name = do
     Nothing -> do
       putStrLn . cs $ "No such migration: " <> name
       exitWith (ExitFailure 1)
-    Just m' -> return m'
+    Just m' -> pure m'
 
 -- Given an action that needs a database connection, connect to the
 -- database using the backend and invoke the action
@@ -108,7 +102,7 @@ lookupMigration storeData name = do
 withBackend :: (Backend -> IO a) -> AppT a
 withBackend act = do
   backend <- asks _appBackend
-  liftIO $ (act backend) `finally` (disconnectBackend backend)
+  liftIO $ act backend `finally` disconnectBackend backend
 
 -- Given a migration name and selected dependencies, get the user's
 -- confirmation that a migration should be created.
@@ -132,7 +126,7 @@ confirmCreation migrationId deps = do
 prompt :: Eq a => String -> PromptChoices a -> IO a
 prompt _ [] = error "prompt requires a list of choices"
 prompt message choiceMap = do
-  putStr $ message ++ " (" ++ choiceStr ++ helpChar ++ "): "
+  putStr $ message <> " (" <> choiceStr <> helpChar <> "): "
   hFlush stdout
   c <- unbufferedGetChar
   case lookup c choiceMap of
@@ -140,12 +134,12 @@ prompt message choiceMap = do
       when (c /= '\n') $ putStrLn ""
       when (c == 'h') $ putStr $ mkPromptHelp choiceMapWithHelp
       retry
-    Just (val, _) -> putStrLn "" >> return val
+    Just (val, _) -> putStrLn "" >> pure val
  where
   retry = prompt message choiceMap
-  choiceStr = intercalate "" $ map (return . fst) choiceMap
+  choiceStr = intercalate "" $ map (pure . fst) choiceMap
   helpChar = if hasHelp choiceMap then "h" else ""
-  choiceMapWithHelp = choiceMap ++ [('h', (undefined, Just "this help"))]
+  choiceMapWithHelp = choiceMap <> [('h', (undefined, Just "this help"))]
 
 -- Given a PromptChoices, build a multi-line help string for those
 -- choices using the description information in the choice list.
@@ -153,14 +147,14 @@ mkPromptHelp :: PromptChoices a -> String
 mkPromptHelp choices =
   intercalate
     ""
-    [ [c] ++ ": " ++ fromJust msg ++ "\n"
+    [ [c] <> ": " <> fromJust msg <> "\n"
     | (c, (_, msg)) <- choices
     , isJust msg
     ]
 
 -- Does the specified prompt choice list have any help messages in it?
 hasHelp :: PromptChoices a -> Bool
-hasHelp = (> 0) . length . filter hasMsg
+hasHelp = any hasMsg
  where
   hasMsg (_, (_, m)) = isJust m
 
@@ -176,12 +170,12 @@ unbufferedGetChar = do
   hSetBuffering stdin NoBuffering
   c <- getChar
   hSetBuffering stdin bufferingMode
-  return c
+  pure c
 
 -- The types for choices the user can make when being prompted for
 -- dependencies.
 data AskDepsChoice = Yes | No | View | Done | Quit
-  deriving (Eq)
+  deriving stock (Eq)
 
 -- Interactively ask the user about which dependencies should be used
 -- when creating a new migration.
@@ -198,39 +192,40 @@ interactiveAskDeps storeData = do
 -- user view information about potential dependencies.  Returns a list
 -- of migration names which were selected.
 interactiveAskDeps' :: StoreData -> [Text] -> IO [Text]
-interactiveAskDeps' _ [] = return []
+interactiveAskDeps' _ [] = pure []
 interactiveAskDeps' storeData (name : rest) = do
-  result <- prompt ("Depend on '" ++ cs name ++ "'?") askDepsChoices
+  result <- prompt ("Depend on '" <> cs name <> "'?") askDepsChoices
   if result == Done
-    then return []
+    then pure []
     else case result of
       Yes -> do
         next <- interactiveAskDeps' storeData rest
-        return $ name : next
+        pure $ name : next
       No -> interactiveAskDeps' storeData rest
       View -> do
         -- load migration
-        let Just m = storeLookup storeData name
-        -- print out description, timestamp, deps
-        when
-          (isJust $ mDesc m)
-          ( putStrLn . cs $
-              "  Description: "
-                <> fromJust (mDesc m)
-          )
-        putStrLn $ "      Created: " ++ show (mTimestamp m)
-        unless
-          (null $ mDeps m)
-          ( putStrLn . cs $
-              "  Deps: "
-                <> T.intercalate "\n        " (mDeps m)
-          )
+        for_ (storeLookup storeData name) $ \m -> do
+          -- print out description, timestamp, deps
+          when
+            (isJust $ mDesc m)
+            ( putStrLn . cs $
+                "  Description: "
+                  <> fromJust (mDesc m)
+            )
+          putStrLn $ "      Created: " <> show (mTimestamp m)
+          unless
+            (null $ mDeps m)
+            ( putStrLn . cs $
+                "  Deps: "
+                  <> T.intercalate "\n        " (mDeps m)
+            )
+
         -- ask again
         interactiveAskDeps' storeData (name : rest)
       Quit -> do
         putStrLn "cancelled."
         exitWith (ExitFailure 1)
-      Done -> return []
+      Done -> pure []
 
 -- The choices the user can make when being prompted for dependencies.
 askDepsChoices :: PromptChoices AskDepsChoice

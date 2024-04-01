@@ -3,16 +3,11 @@ module Database.Schema.Migrations.CycleDetection
   )
 where
 
-import Data.Graph.Inductive.Graph
-  ( Graph (..)
-  , Node
-  , edges
-  , nodes
-  )
+import Prelude
 
 import Control.Monad (forM)
 import Control.Monad.State (State, evalState, get, gets, put)
-
+import Data.Graph.Inductive.Graph (Graph (..), Node, edges, nodes)
 import Data.List (findIndex)
 import Data.Maybe (fromJust)
 
@@ -30,9 +25,9 @@ replace :: [a] -> Int -> a -> [a]
 replace elems index val
   | index > length elems = error "replacement index too large"
   | otherwise =
-      (take index elems)
-        ++ [val]
-        ++ (reverse $ take ((length elems) - (index + 1)) $ reverse elems)
+      take index elems
+        <> [val]
+        <> reverse (take (length elems - (index + 1)) $ reverse elems)
 
 setMark :: Int -> Mark -> State CycleDetectionState ()
 setMark n mark = do
@@ -46,8 +41,8 @@ hasCycle' g = do
     m <- getMark n
     case m of
       White -> visit g n
-      _ -> return False
-  return $ or result
+      _ -> pure False
+  pure $ or result
 
 visit :: Graph g => g a b -> Node -> State CycleDetectionState Bool
 visit g n = do
@@ -55,11 +50,14 @@ visit g n = do
   result <- forM [v | (u, v) <- edges g, u == n] $ \node -> do
     m <- getMark node
     case m of
-      Gray -> return True
+      Gray -> pure True
       White -> visit g node
-      _ -> return False
-  case or result of
-    True -> return True
-    False -> do
-      setMark n Black
-      return False
+      _ -> pure False
+  ( if or result
+      then pure True
+      else
+        ( do
+            setMark n Black
+            pure False
+        )
+    )

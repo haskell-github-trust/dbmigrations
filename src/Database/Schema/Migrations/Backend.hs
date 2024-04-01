@@ -1,16 +1,13 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Database.Schema.Migrations.Backend
   ( Backend (..)
   , rootMigrationName
   )
 where
 
-import Data.Text (Text)
+import Prelude
 
-import Database.Schema.Migrations.Migration
-  ( Migration (..)
-  )
+import Data.Text (Text)
+import Database.Schema.Migrations.Migration (Migration (..))
 
 -- | Backend instances should use this as the name of the migration
 --  returned by getBootstrapMigration; this migration is special
@@ -24,8 +21,7 @@ rootMigrationName = "root"
 --  migrations.  A Backend also supplies the migration necessary to
 --  "bootstrap" a backend so that it can track which migrations are
 --  installed.
-data Backend
-  = Backend
+data Backend = Backend
   { getBootstrapMigration :: IO Migration
   -- ^ The migration necessary to bootstrap a database with
   -- this connection interface. This might differ slightly

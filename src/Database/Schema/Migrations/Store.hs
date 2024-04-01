@@ -1,5 +1,3 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-
 -- | This module provides an abstraction for a /migration store/, a
 --  facility in which 'Migration's can be stored and from which they
 --  can be loaded.  This module also provides functions for taking
@@ -24,21 +22,19 @@ module Database.Schema.Migrations.Store
   )
 where
 
-import Control.Applicative ((<$>))
+import Prelude
+
 import Control.Monad (mzero)
 import Data.Graph.Inductive.Graph (indeg, labNodes)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Maybe (isJust)
 import Data.Text (Text)
-
 import Database.Schema.Migrations.Dependencies
   ( DependencyGraph (..)
   , depsOf
   , mkDepGraph
   )
-import Database.Schema.Migrations.Migration
-  ( Migration (..)
-  )
+import Database.Schema.Migrations.Migration (Migration (..))
 
 -- | A mapping from migration name to 'Migration'.  This is exported
 --  for testing purposes, but you'll want to interface with this
@@ -53,8 +49,7 @@ data StoreData = StoreData
 -- | The type of migration storage facilities. A MigrationStore is a
 --  facility in which new migrations can be created, and from which
 --  existing migrations can be loaded.
-data MigrationStore
-  = MigrationStore
+data MigrationStore = MigrationStore
   { loadMigration :: Text -> IO (Either String Migration)
   -- ^ Load a migration from the store.
   , saveMigration :: Migration -> IO ()
@@ -80,15 +75,15 @@ data MapValidationError
     DependencyGraphError String
   | -- | The specified migration is invalid.
     InvalidMigration String
-  deriving (Eq)
+  deriving stock (Eq)
 
 instance Show MapValidationError where
   show (DependencyReferenceError from to) =
-    "Migration " ++ (show from) ++ " references nonexistent dependency " ++ show to
+    "Migration " <> show from <> " references nonexistent dependency " <> show to
   show (DependencyGraphError msg) =
-    "There was an error constructing the dependency graph: " ++ msg
+    "There was an error constructing the dependency graph: " <> msg
   show (InvalidMigration msg) =
-    "There was an error loading a migration: " ++ msg
+    "There was an error loading a migration: " <> msg
 
 -- | A convenience function for extracting the list of 'Migration's
 --  extant in the specified 'StoreData'.
@@ -109,37 +104,40 @@ storeLookup storeData migrationName =
 loadMigrations :: MigrationStore -> IO (Either [MapValidationError] StoreData)
 loadMigrations store = do
   migrations <- getMigrations store
-  loadedWithErrors <- mapM (\name -> loadMigration store name) migrations
+  loadedWithErrors <- mapM (loadMigration store) migrations
 
   let
     mMap = Map.fromList $ [(mId e, e) | e <- loaded]
     validationErrors = validateMigrationMap mMap
     (loaded, loadErrors) = sortResults loadedWithErrors ([], [])
-    allErrors = validationErrors ++ (InvalidMigration <$> loadErrors)
+    allErrors = validationErrors <> (InvalidMigration <$> loadErrors)
 
     sortResults [] v = v
     sortResults (Left e : rest) (ms, es) = sortResults rest (ms, e : es)
     sortResults (Right m : rest) (ms, es) = sortResults rest (m : ms, es)
 
-  case null allErrors of
-    False -> return $ Left allErrors
-    True -> do
-      -- Construct a dependency graph and, if that succeeds, return
-      -- StoreData.
-      case depGraphFromMapping mMap of
-        Left e -> return $ Left [DependencyGraphError e]
-        Right gr ->
-          return $
-            Right
-              StoreData
-                { storeDataMapping = mMap
-                , storeDataGraph = gr
-                }
+  ( if null allErrors
+      then
+        ( do
+            -- Construct a dependency graph and, if that succeeds, return
+            -- StoreData.
+            case depGraphFromMapping mMap of
+              Left e -> pure $ Left [DependencyGraphError e]
+              Right gr ->
+                pure $
+                  Right
+                    StoreData
+                      { storeDataMapping = mMap
+                      , storeDataGraph = gr
+                      }
+        )
+      else pure $ Left allErrors
+    )
 
 -- | Validate a migration map.  Returns zero or more validation errors.
 validateMigrationMap :: MigrationMap -> [MapValidationError]
 validateMigrationMap mMap = do
-  validateSingleMigration mMap =<< snd <$> Map.toList mMap
+  validateSingleMigration mMap . snd =<< Map.toList mMap
 
 -- | Validate a single migration.  Looks up the migration's
 --  dependencies in the specified 'MigrationMap' and returns a
@@ -148,10 +146,8 @@ validateSingleMigration :: MigrationMap -> Migration -> [MapValidationError]
 validateSingleMigration mMap m = do
   depId <- depsOf m
   if isJust $ Map.lookup depId mMap
-    then
-      mzero
-    else
-      return $ DependencyReferenceError (mId m) depId
+    then mzero
+    else pure $ DependencyReferenceError (mId m) depId
 
 -- | Create a 'DependencyGraph' from a 'MigrationMap'; returns Left if
 --  the dependency graph cannot be constructed (e.g., due to a

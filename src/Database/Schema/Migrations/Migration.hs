@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Database.Schema.Migrations.Migration
   ( Migration (..)
   , newMigration
@@ -7,13 +5,12 @@ module Database.Schema.Migrations.Migration
   )
 where
 
-import Database.Schema.Migrations.Dependencies
+import Prelude
 
 import Data.Text (Text)
 import Data.Time ()
-
--- for UTCTime Show instance
-import qualified Data.Time.Clock as Clock
+import Data.Time.Clock qualified as Clock
+import Database.Schema.Migrations.Dependencies
 
 data Migration = Migration
   { mTimestamp :: Maybe Clock.UTCTime
@@ -23,7 +20,7 @@ data Migration = Migration
   , mRevert :: Maybe Text
   , mDeps :: [Text]
   }
-  deriving (Eq, Show, Ord)
+  deriving stock (Eq, Show, Ord)
 
 instance Dependable Migration where
   depsOf = mDeps

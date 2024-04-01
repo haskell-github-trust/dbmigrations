@@ -3,6 +3,8 @@ module CommonTH
   )
 where
 
+import Prelude
+
 import Language.Haskell.TH
 import System.Directory (canonicalizePath, getCurrentDirectory)
 import System.FilePath (combine, takeDirectory)
@@ -14,8 +16,5 @@ getRepoRoot =
     cwd <- runIO getCurrentDirectory
     let thisFileName = combine cwd $ loc_filename here
     -- XXX: This depends on the location of this file in the source tree
-    return =<< runIO $
-      canonicalizePath $
-        head $
-          drop 2 $
-            iterate takeDirectory thisFileName
+    runIO $
+      canonicalizePath (iterate takeDirectory thisFileName !! 2)

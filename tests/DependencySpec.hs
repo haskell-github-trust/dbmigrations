@@ -1,59 +1,61 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
-module DependencyTest
-  ( tests
+module DependencySpec
+  ( spec
   )
 where
 
-import Data.Text (Text)
-
-import Data.Graph.Inductive.Graph (Graph (..))
-import Test.HUnit
+import Prelude
 
 import Common
+import Data.Foldable (for_)
+import Data.Graph.Inductive.Graph (Graph (..))
+import Data.Text (Text, unpack)
+import Data.Text qualified as T
 import Database.Schema.Migrations.Dependencies
+import Test.Hspec
 
-tests :: [Test]
-tests = depGraphTests ++ dependencyTests
+spec :: Spec
+spec = do
+  describe "mkDepGraph" $ do
+    let
+      first = TD "first" []
+      second = TD "second" ["first"]
+      cycleFirst = TD "first" ["second"]
+      cycleSecond = TD "second" ["first"]
 
-type DepGraphTestCase =
-  ([TestDependable], Either String (DependencyGraph TestDependable))
+    it "returns empty for empty" $ do
+      mkDepGraph @TestDependable [] `shouldBe` Right (DG [] [] empty)
 
-depGraphTestCases :: [DepGraphTestCase]
-depGraphTestCases =
-  [
-    ( []
-    , Right $ DG [] [] empty
-    )
-  ,
-    ( [first, second]
-    , Right $
-        DG
-          [(first, 1), (second, 2)]
-          [("first", 1), ("second", 2)]
-          ( mkGraph
-              [(1, "first"), (2, "second")]
-              [(2, 1, "first -> second")]
+    it "builds a graph" $ do
+      mkDepGraph [first, second]
+        `shouldBe` Right
+          ( DG
+              [(first, 1), (second, 2)]
+              [("first", 1), ("second", 2)]
+              ( mkGraph
+                  [(1, "first"), (2, "second")]
+                  [(2, 1, "first -> second")]
+              )
           )
-    )
-  ,
-    ( [cycleFirst, cycleSecond]
-    , Left "Invalid dependency graph; cycle detected"
-    )
-  ]
- where
-  first = TD "first" []
-  second = TD "second" ["first"]
-  cycleFirst = TD "first" ["second"]
-  cycleSecond = TD "second" ["first"]
 
-depGraphTests :: [Test]
-depGraphTests = map mkDepGraphTest depGraphTestCases
+    it "fails on cycles" $ do
+      mkDepGraph [cycleFirst, cycleSecond]
+        `shouldBe` Left "Invalid dependency graph; cycle detected"
 
-mkDepGraphTest :: DepGraphTestCase -> Test
-mkDepGraphTest (input, expected) = expected ~=? mkDepGraph input
+  describe "dependencies and reverseDependencies" $ do
+    for_ dependencyTestCases $ \(deps, a, dir, expected) -> do
+      let (f, arrow) = case dir of
+            Forward -> (dependencies, " -> ")
+            Reverse -> (reverseDependencies, " <- ")
 
-data Direction = Forward | Reverse deriving (Show)
+      it (unpack $ T.intercalate arrow $ map tdId deps) $ do
+        let Right g = mkDepGraph deps
+        f g a `shouldBe` expected
+
+data Direction = Forward | Reverse
+  deriving stock (Show)
+
 type DependencyTestCase = ([TestDependable], Text, Direction, [Text])
 
 dependencyTestCases :: [DependencyTestCase]
@@ -128,17 +130,3 @@ dependencyTestCases =
     , ["fourth", "third", "fifth", "second"]
     )
   ]
-
-fromRight :: Either a b -> b
-fromRight (Left _) = error "Got a Left value"
-fromRight (Right v) = v
-
-mkDependencyTest :: DependencyTestCase -> Test
-mkDependencyTest testCase@(deps, a, dir, expected) =
-  let f = case dir of
-        Forward -> dependencies
-        Reverse -> reverseDependencies
-  in  (show testCase) ~: expected ~=? f (fromRight $ mkDepGraph deps) a
-
-dependencyTests :: [Test]
-dependencyTests = map mkDependencyTest dependencyTestCases

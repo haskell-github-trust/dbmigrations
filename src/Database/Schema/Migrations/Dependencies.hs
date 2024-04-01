@@ -1,6 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-
 -- | This module types and functions for representing a dependency
 --  graph of arbitrary objects and functions for querying such graphs
 --  to get dependency and reverse dependency information.
@@ -13,6 +10,9 @@ module Database.Schema.Migrations.Dependencies
   )
 where
 
+import Prelude
+
+import Data.Bifunctor (first)
 import Data.Graph.Inductive.Graph
   ( Graph (..)
   , Node
@@ -24,9 +24,7 @@ import Data.Graph.Inductive.Graph
   )
 import Data.Graph.Inductive.PatriciaTree (Gr)
 import Data.Maybe (fromJust)
-import Data.Monoid ((<>))
 import Data.Text (Text)
-
 import Database.Schema.Migrations.CycleDetection (hasCycle)
 
 -- | 'Dependable' objects supply a representation of their identifiers,
@@ -58,13 +56,12 @@ data DependencyGraph a = DG
 
 instance Eq a => Eq (DependencyGraph a) where
   g1 == g2 =
-    ( (nodes $ depGraph g1) == (nodes $ depGraph g2)
-        && (edges $ depGraph g1) == (edges $ depGraph g2)
-    )
+    nodes (depGraph g1) == nodes (depGraph g2)
+      && edges (depGraph g1) == edges (depGraph g2)
 
 instance Show a => Show (DependencyGraph a) where
   show g =
-    "(" ++ (show $ nodes $ depGraph g) ++ ", " ++ (show $ edges $ depGraph g) ++ ")"
+    "(" <> show (nodes $ depGraph g) <> ", " <> show (edges $ depGraph g) <> ")"
 
 -- XXX: provide details about detected cycles
 
@@ -97,14 +94,14 @@ mkDepGraph objects =
 
   objMap = map (\o -> (depId o, o)) objects
   ids = zip objects [1 ..]
-  names = map (\(o, i) -> (depId o, i)) ids
+  names = map (first depId) ids
 
 type NextNodesFunc = Gr Text Text -> Node -> [Node]
 
 cleanLDups :: Eq a => [a] -> [a]
 cleanLDups [] = []
 cleanLDups [e] = [e]
-cleanLDups (e : es) = if e `elem` es then (cleanLDups es) else (e : cleanLDups es)
+cleanLDups (e : es) = if e `elem` es then cleanLDups es else e : cleanLDups es
 
 -- | Given a dependency graph and an ID, return the IDs of objects that
 --  the object depends on.  IDs are returned with least direct
@@ -124,8 +121,8 @@ dependenciesWith nextNodes dg@(DG _ nMap theGraph) name =
   let
     lookupId = fromJust $ lookup name nMap
     depNodes = nextNodes theGraph lookupId
-    recurse theNodes = map (dependenciesWith nextNodes dg) theNodes
     getLabel node = fromJust $ lab theGraph node
     labels = map getLabel depNodes
+    recurse = map (dependenciesWith nextNodes dg)
   in
-    labels ++ (concat $ recurse labels)
+    labels <> concat (recurse labels)

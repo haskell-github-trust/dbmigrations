@@ -1,24 +1,18 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Database.Schema.Migrations.Filesystem.Serialize
   ( serializeMigration
   )
 where
 
-import Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
+import Prelude
 
--- for UTCTime Show instance
+import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
 import Data.Maybe (catMaybes)
-import Data.Monoid ((<>))
 import Data.String.Conversions (cs)
 import Data.Text (Text)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Data.Time ()
-
-import Database.Schema.Migrations.Migration
-  ( Migration (..)
-  )
+import Database.Schema.Migrations.Migration (Migration (..))
 
 type FieldSerializer = Migration -> Maybe ByteString
 
@@ -44,7 +38,7 @@ serializeTimestamp m =
     Just ts -> Just $ "Created: " <> (cs . show $ ts)
 
 serializeDepends :: FieldSerializer
-serializeDepends m = Just . cs $ "Depends: " <> (T.intercalate " " $ mDeps m)
+serializeDepends m = Just . cs $ "Depends: " <> T.intercalate " " (mDeps m)
 
 serializeRevert :: FieldSerializer
 serializeRevert m =
@@ -53,10 +47,10 @@ serializeRevert m =
     Just revert ->
       Just $
         "Revert: |\n"
-          <> (serializeMultiline revert)
+          <> serializeMultiline revert
 
 serializeApply :: FieldSerializer
-serializeApply m = Just $ "Apply: |\n" <> (serializeMultiline $ mApply m)
+serializeApply m = Just $ "Apply: |\n" <> serializeMultiline (mApply m)
 
 commonPrefix :: Text -> Text -> Text
 commonPrefix a b = cs . map fst $ takeWhile (uncurry (==)) (T.zip a b)

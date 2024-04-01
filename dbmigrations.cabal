@@ -1,171 +1,181 @@
-Name:                dbmigrations
-Version:             2.1.0
-Synopsis:            An implementation of relational database "migrations"
-Description:         A library and program for the creation,
-                     management, and installation of schema updates
-                     (called /migrations/) for a relational database. In
-                     particular, this package lets the migration author
-                     express explicit dependencies between migrations
-                     and the management tool automatically installs or
-                     reverts migrations accordingly, using transactions
-                     for safety.
+cabal-version: 1.18
 
-                     This package is written to support a number of
-                     different databases. For packages that support
-                     specific databases using this library, see packages
-                     named "dbmigrations-BACKEND". Each package
-                     provides an executable "moo-BACKEND" for managing
-                     migrations. Usage information for the "moo-"
-                     executables can be found in "MOO.TXT" in this
-                     package.
+-- This file has been generated from package.yaml by hpack version 0.36.0.
+--
+-- see: https://github.com/sol/hpack
 
-                     This package also includes a conformance test suite
-                     to ensure that backend implementations respect the
-                     library's required semantics.
+name:           dbmigrations
+version:        2.1.0
+synopsis:       An implementation of relational database "migrations"
+description:    Please see <https://github.com/haskell-github-trust/dbmigrations#readme>
+category:       Database
+homepage:       https://github.com/haskell-github-trust/dbmigrations#readme
+bug-reports:    https://github.com/haskell-github-trust/dbmigrations/issues
+author:         Jonathan Daugherty <cygnus@foobox.com>
+maintainer:     Pat Brisbin <pbrisbin@gmail.com>
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    tests/example_store/root
+    tests/example_store/update1
+    tests/example_store/update2
+    tests/config_loading/cfg1.cfg
+    tests/config_loading/cfg_ts.cfg
+    tests/config_loading/invalid.cfg
+    tests/config_loading/missing.cfg
+    tests/config_loading/moo.cfg
+    tests/migration_parsing/invalid_field_name.txt
+    tests/migration_parsing/invalid_missing_required_fields.txt
+    tests/migration_parsing/invalid_syntax.txt
+    tests/migration_parsing/invalid_timestamp.txt
+    tests/migration_parsing/valid_full.txt
+    tests/migration_parsing/valid_no_depends.txt
+    tests/migration_parsing/valid_no_desc.txt
+    tests/migration_parsing/valid_no_revert.txt
+    tests/migration_parsing/valid_no_timestamp.txt
+    tests/migration_parsing/valid_with_colon.txt
+    tests/migration_parsing/valid_with_comments.txt
+    tests/migration_parsing/valid_with_comments2.txt
+    tests/migration_parsing/valid_with_multiline_deps.txt
+extra-doc-files:
+    README.md
+    CHANGELOG.md
 
-Category:            Database
-Author:              Jonathan Daugherty <cygnus@foobox.com>
-Maintainer:          Jonathan Daugherty <cygnus@foobox.com>
-Build-Type:          Simple
-License:             BSD3
-License-File:        LICENSE
-Cabal-Version:       >= 1.10
+source-repository head
+  type: git
+  location: https://github.com/haskell-github-trust/dbmigrations
 
-Data-Files:
-  README.md
-  MOO.TXT
-  test/example_store/root
-  test/example_store/update1
-  test/example_store/update2
-  test/config_loading/cfg1.cfg
-  test/config_loading/cfg_ts.cfg
-  test/config_loading/invalid.cfg
-  test/config_loading/missing.cfg
-  test/config_loading/moo.cfg
-  test/migration_parsing/invalid_field_name.txt
-  test/migration_parsing/invalid_missing_required_fields.txt
-  test/migration_parsing/invalid_syntax.txt
-  test/migration_parsing/invalid_timestamp.txt
-  test/migration_parsing/valid_full.txt
-  test/migration_parsing/valid_no_depends.txt
-  test/migration_parsing/valid_no_desc.txt
-  test/migration_parsing/valid_no_revert.txt
-  test/migration_parsing/valid_no_timestamp.txt
-  test/migration_parsing/valid_with_colon.txt
-  test/migration_parsing/valid_with_comments.txt
-  test/migration_parsing/valid_with_comments2.txt
-  test/migration_parsing/valid_with_multiline_deps.txt
-
-Source-Repository head
-  type:     git
-  location: git://github.com/jtdaugherty/dbmigrations.git
-
-Library
-  default-language: Haskell2010
-  if impl(ghc >= 6.12.0)
-    ghc-options: -Wall -fwarn-tabs -funbox-strict-fields
-                 -fno-warn-unused-do-bind
-  else
-    ghc-options: -Wall -fwarn-tabs -funbox-strict-fields
-
-  Build-Depends:
-    base >= 4 && < 5,
-    HDBC >= 2.2.1,
-    time >= 1.4,
-    random >= 1.0,
-    containers >= 0.2,
-    mtl >= 2.1,
-    filepath >= 1.1,
-    directory >= 1.0,
-    fgl >= 5.4,
-    template-haskell,
-    yaml,
-    bytestring >= 0.9,
-    string-conversions >= 0.4,
-    text >= 0.11,
-    configurator >= 0.2,
-    split >= 0.2.2,
-    HUnit >= 1.2,
-    aeson,
-    unordered-containers
-
-  Hs-Source-Dirs:    src
-  Exposed-Modules:
-          Database.Schema.Migrations
-          Database.Schema.Migrations.Backend
-          Database.Schema.Migrations.Backend.HDBC
-          Database.Schema.Migrations.CycleDetection
-          Database.Schema.Migrations.Dependencies
-          Database.Schema.Migrations.Filesystem
-          Database.Schema.Migrations.Filesystem.Serialize
-          Database.Schema.Migrations.Migration
-          Database.Schema.Migrations.Store
-          Database.Schema.Migrations.Test.BackendTest
-          Moo.CommandHandlers
-          Moo.CommandInterface
-          Moo.CommandUtils
-          Moo.Core
-          Moo.Main
-
-test-suite dbmigrations-tests
-  default-language: Haskell2010
-  type: exitcode-stdio-1.0
-  Build-Depends:
-    base >= 4 && < 5,
-    dbmigrations,
-    time >= 1.4,
-    containers >= 0.2,
-    mtl >= 2.1,
-    filepath >= 1.1,
-    directory >= 1.0,
-    fgl >= 5.4,
-    template-haskell,
-    yaml,
-    bytestring >= 0.9,
-    string-conversions >= 0.4,
-    MissingH,
-    HDBC >= 2.2.1,
-    HUnit >= 1.2,
-    process >= 1.1,
-    configurator >= 0.2,
-    text >= 0.11,
-    split >= 0.2.2
-
+library
+  exposed-modules:
+      Database.Schema.Migrations
+      Database.Schema.Migrations.Backend
+      Database.Schema.Migrations.Backend.HDBC
+      Database.Schema.Migrations.CycleDetection
+      Database.Schema.Migrations.Dependencies
+      Database.Schema.Migrations.Filesystem
+      Database.Schema.Migrations.Filesystem.Serialize
+      Database.Schema.Migrations.Migration
+      Database.Schema.Migrations.Store
+      Database.Schema.Migrations.Test.BackendTest
+      Moo.CommandHandlers
+      Moo.CommandInterface
+      Moo.CommandUtils
+      Moo.Core
+      Moo.Main
   other-modules:
-    Common
-    CommonTH
-    CycleDetectionTest
-    DependencyTest
-    FilesystemParseTest
-    FilesystemSerializeTest
-    FilesystemTest
-    MigrationsTest
-    StoreTest
-    InMemoryStore
-    LinearMigrationsTest
-    ConfigurationTest
+      Paths_dbmigrations
+  hs-source-dirs:
+      src
+  default-extensions:
+      BangPatterns
+      DataKinds
+      DeriveAnyClass
+      DeriveFoldable
+      DeriveFunctor
+      DeriveGeneric
+      DeriveLift
+      DeriveTraversable
+      DerivingStrategies
+      FlexibleContexts
+      FlexibleInstances
+      GADTs
+      GeneralizedNewtypeDeriving
+      LambdaCase
+      MultiParamTypeClasses
+      NoImplicitPrelude
+      NoMonomorphismRestriction
+      OverloadedStrings
+      RankNTypes
+      ScopedTypeVariables
+      StandaloneDeriving
+      TypeApplications
+      TypeFamilies
+  ghc-options: -fwrite-ide-info -Weverything -Wno-all-missed-specialisations -Wno-missed-specialisations -Wno-missing-exported-signatures -Wno-missing-import-lists -Wno-missing-local-signatures -Wno-monomorphism-restriction -Wno-safe -Wno-unsafe
+  build-depends:
+      HDBC
+    , aeson
+    , base <5
+    , bytestring
+    , configurator
+    , containers
+    , directory
+    , fgl
+    , filepath
+    , hspec
+    , mtl
+    , string-conversions
+    , text
+    , time
+    , yaml
+  default-language: GHC2021
+  if impl(ghc >= 9.2)
+    ghc-options: -Wno-missing-kind-signatures
+  if impl(ghc >= 8.10)
+    ghc-options: -Wno-missing-safe-haskell-mode
 
-  if impl(ghc >= 6.12.0)
-    ghc-options: -threaded -Wall -fwarn-tabs -funbox-strict-fields
-                 -fno-warn-unused-do-bind -Wwarn
-  else
-    ghc-options: -threaded -Wall -fwarn-tabs -funbox-strict-fields
-
-  Hs-Source-Dirs:  test
-  Main-is:         Main.hs
-
-Executable moo
-  default-language: Haskell2010
-  Build-Depends:
-    base >= 4 && < 5,
-    configurator >= 0.2,
-    dbmigrations
-
-  if impl(ghc >= 6.12.0)
-    ghc-options: -threaded -Wall -fwarn-tabs -funbox-strict-fields
-                 -fno-warn-unused-do-bind
-  else
-    ghc-options: -threaded -Wall -fwarn-tabs -funbox-strict-fields
-
-  Hs-Source-Dirs:  programs
-  Main-is:         Moo.hs
+test-suite spec
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Common
+      CommonTH
+      ConfigurationSpec
+      CycleDetectionSpec
+      DependencySpec
+      FilesystemParseSpec
+      FilesystemSerializeSpec
+      FilesystemSpec
+      HDBCSpec
+      InMemoryStore
+      LinearMigrationsSpec
+      MigrationsSpec
+      StoreSpec
+      Paths_dbmigrations
+  hs-source-dirs:
+      tests
+  default-extensions:
+      BangPatterns
+      DataKinds
+      DeriveAnyClass
+      DeriveFoldable
+      DeriveFunctor
+      DeriveGeneric
+      DeriveLift
+      DeriveTraversable
+      DerivingStrategies
+      FlexibleContexts
+      FlexibleInstances
+      GADTs
+      GeneralizedNewtypeDeriving
+      LambdaCase
+      MultiParamTypeClasses
+      NoImplicitPrelude
+      NoMonomorphismRestriction
+      OverloadedStrings
+      RankNTypes
+      ScopedTypeVariables
+      StandaloneDeriving
+      TypeApplications
+      TypeFamilies
+  ghc-options: -fwrite-ide-info -Weverything -Wno-all-missed-specialisations -Wno-missed-specialisations -Wno-missing-exported-signatures -Wno-missing-import-lists -Wno-missing-local-signatures -Wno-monomorphism-restriction -Wno-safe -Wno-unsafe -threaded -rtsopts "-with-rtsopts=-N"
+  build-depends:
+      HDBC
+    , HDBC-sqlite3
+    , base <5
+    , containers
+    , dbmigrations
+    , directory
+    , fgl
+    , filepath
+    , hspec
+    , mtl
+    , string-conversions
+    , template-haskell
+    , text
+    , time
+  default-language: GHC2021
+  if impl(ghc >= 9.2)
+    ghc-options: -Wno-missing-kind-signatures
+  if impl(ghc >= 8.10)
+    ghc-options: -Wno-missing-safe-haskell-mode

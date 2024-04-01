@@ -8,14 +8,14 @@ module Moo.CommandInterface
   , usageString
   ) where
 
+import Prelude
+
 import Data.Maybe
 import Moo.CommandHandlers
 import Moo.Core
 import System.Console.GetOpt
 
 -- | The available commands; used to dispatch from the command line and
---  used to generate usage output.
---  |The available commands; used to dispatch from the command line and
 --  used to generate usage output.
 commands :: [Command]
 commands =
@@ -105,7 +105,7 @@ optionConfigFile =
     ["config-file"]
     ( ReqArg
         ( \arg opt ->
-            return opt {_configFilePath = Just arg}
+            pure opt {_configFilePath = Just arg}
         )
         "FILE"
     )
@@ -116,7 +116,7 @@ optionTest =
   Option
     "t"
     ["test"]
-    (NoArg (\opt -> return opt {_test = True}))
+    (NoArg (\opt -> pure opt {_test = True}))
     "Perform the action then rollback when finished"
 
 optionNoAsk :: OptDescr (CommandOptions -> IO CommandOptions)
@@ -124,26 +124,26 @@ optionNoAsk =
   Option
     "n"
     ["no-ask"]
-    (NoArg (\opt -> return opt {_noAsk = True}))
+    (NoArg (\opt -> pure opt {_noAsk = True}))
     "Do not interactively ask any questions, just do it"
 
 getCommandArgs :: [String] -> IO (CommandOptions, [String])
 getCommandArgs args = do
   let (actions, required, _) = getOpt RequireOrder commandOptions args
   opts <- foldl (>>=) defaultOptions actions
-  return (opts, required)
+  pure (opts, required)
 
 defaultOptions :: IO CommandOptions
-defaultOptions = return $ CommandOptions Nothing False False
+defaultOptions = pure $ CommandOptions Nothing False False
 
 commandOptionUsage :: String
 commandOptionUsage = usageInfo "Options:" commandOptions
 
 usageString :: Command -> String
 usageString command =
-  unwords (_cName command : optionalArgs ++ options ++ requiredArgs)
+  unwords (_cName command : optionalArgs <> options <> requiredArgs)
  where
-  requiredArgs = map (\s -> "<" ++ s ++ ">") $ _cRequired command
-  optionalArgs = map (\s -> "[" ++ s ++ "]") $ _cOptional command
-  options = map (\s -> "[" ++ "--" ++ s ++ "]") optionStrings
+  requiredArgs = map (\s -> "<" <> s <> ">") $ _cRequired command
+  optionalArgs = map (\s -> "[" <> s <> "]") $ _cOptional command
+  options = map (\s -> "[--" <> s <> "]") optionStrings
   optionStrings = _cAllowedOptions command

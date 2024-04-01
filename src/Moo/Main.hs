@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Moo.Main
   ( mainWithParameters
   , ExecutableParameters (..)
@@ -11,15 +9,13 @@ module Moo.Main
   )
 where
 
+import Prelude
+
 import Control.Monad (forM_, when)
 import Control.Monad.Reader (runReaderT)
 import Data.String.Conversions (cs)
 import Data.Text (Text)
 import Database.HDBC (SqlError, catchSql, seErrorMsg)
-import System.Environment (getProgName)
-import System.Exit (ExitCode (ExitFailure), exitWith)
-import Prelude hiding (lookup)
-
 import Database.Schema.Migrations.Filesystem
   ( FilesystemStoreSettings (..)
   , filesystemStore
@@ -27,6 +23,8 @@ import Database.Schema.Migrations.Filesystem
 import Database.Schema.Migrations.Store
 import Moo.CommandInterface
 import Moo.Core
+import System.Environment (getProgName)
+import System.Exit (ExitCode (ExitFailure), exitWith)
 
 type Args = [String]
 
@@ -34,18 +32,18 @@ usage :: IO a
 usage = do
   progName <- getProgName
 
-  putStrLn $ "Usage: " ++ progName ++ " <command> [args]"
+  putStrLn $ "Usage: " <> progName <> " <command> [args]"
   putStrLn "Environment:"
-  putStrLn $ "  " ++ envDatabaseName ++ ": database connection string"
-  putStrLn $ "  " ++ envStoreName ++ ": path to migration store"
+  putStrLn $ "  " <> envDatabaseName <> ": database connection string"
+  putStrLn $ "  " <> envStoreName <> ": path to migration store"
   putStrLn $
     "  "
-      ++ envLinearMigrations
-      ++ ": whether to use linear migrations (defaults to False)"
+      <> envLinearMigrations
+      <> ": whether to use linear migrations (defaults to False)"
   putStrLn "Commands:"
   forM_ commands $ \command -> do
-    putStrLn $ "  " ++ usageString command
-    putStrLn $ "  " ++ _cDescription command
+    putStrLn $ "  " <> usageString command
+    putStrLn $ "  " <> _cDescription command
     putStrLn ""
 
   putStrLn commandOptionUsage
@@ -54,20 +52,18 @@ usage = do
 usageSpecific :: Command -> IO a
 usageSpecific command = do
   pn <- getProgName
-  putStrLn $ "Usage: " ++ pn ++ " " ++ usageString command
+  putStrLn $ "Usage: " <> pn <> " " <> usageString command
   exitWith (ExitFailure 1)
 
 procArgs :: Args -> IO (Command, CommandOptions, [String])
 procArgs args = do
   when (null args) usage
 
-  command <- case findCommand $ head args of
-    Nothing -> usage
-    Just c -> return c
+  command <- maybe usage pure (findCommand $ head args)
 
   (opts, required) <- getCommandArgs $ tail args
 
-  return (command, opts, required)
+  pure (command, opts, required)
 
 mainWithParameters :: Args -> ExecutableParameters -> IO ()
 mainWithParameters args parameters = do
@@ -79,14 +75,13 @@ mainWithParameters args parameters = do
     linear = _parametersLinearMigrations parameters
 
   if length required < length (_cRequired command)
-    then
-      usageSpecific command
+    then usageSpecific command
     else do
       loadedStoreData <- loadMigrations store
       case loadedStoreData of
         Left es -> do
           putStrLn "There were errors in the migration store:"
-          forM_ es $ \err -> putStrLn $ "  " ++ show err
+          forM_ es $ \err -> putStrLn $ "  " <> show err
         Right storeData -> do
           let st =
                 AppState
@@ -105,5 +100,5 @@ mainWithParameters args parameters = do
 
 reportSqlError :: SqlError -> IO a
 reportSqlError e = do
-  putStrLn $ "\n" ++ "A database error occurred: " ++ seErrorMsg e
+  putStrLn $ "\nA database error occurred: " <> seErrorMsg e
   exitWith (ExitFailure 1)
