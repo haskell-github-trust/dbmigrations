@@ -7,6 +7,7 @@ where
 import Prelude
 
 import Control.Exception (catch)
+import Control.Monad (void)
 import Data.String.Conversions (cs)
 import Data.Text (Text)
 import Data.Time.Clock (getCurrentTime)
@@ -25,60 +26,52 @@ import Database.Schema.Migrations.Backend (Backend (..), rootMigrationName)
 import Database.Schema.Migrations.Migration (Migration (..), newMigration)
 import Database.Schema.Migrations.Test.BackendTest qualified as BackendTest
 
-migrationTableName :: Text
-migrationTableName = "installed_migrations"
-
-createSql :: Text
-createSql = "CREATE TABLE " <> migrationTableName <> " (migration_id TEXT)"
-
-revertSql :: Text
-revertSql = "DROP TABLE " <> migrationTableName
+installedMigrations :: Text
+installedMigrations = "installed_migrations"
 
 -- | General Backend constructor for all HDBC connection implementations.
 hdbcBackend :: IConnection conn => conn -> Backend
 hdbcBackend conn =
   Backend
-    { isBootstrapped = elem (cs migrationTableName) <$> getTables conn
+    { isBootstrapped = elem (cs installedMigrations) <$> getTables conn
     , getBootstrapMigration =
         do
           ts <- getCurrentTime
           pure $
             (newMigration rootMigrationName)
-              { mApply = createSql
-              , mRevert = Just revertSql
+              { mApply = "CREATE TABLE " <> installedMigrations <> " (migration_id TEXT)"
+              , mRevert = Just $ "DROP TABLE " <> installedMigrations
               , mDesc = Just "Migration table installation"
               , mTimestamp = Just ts
               }
     , applyMigration = \m -> do
         runRaw conn (cs $ mApply m)
-        _ <-
+        void $
           run
             conn
             ( cs $
                 "INSERT INTO "
-                  <> migrationTableName
+                  <> installedMigrations
                   <> " (migration_id) VALUES (?)"
             )
             [toSql $ mId m]
-        pure ()
     , revertMigration = \m -> do
         case mRevert m of
           Nothing -> pure ()
           Just query -> runRaw conn (cs query)
         -- Remove migration from installed_migrations in either case.
-        _ <-
+        void $
           run
             conn
             ( cs $
                 "DELETE FROM "
-                  <> migrationTableName
+                  <> installedMigrations
                   <> " WHERE migration_id = ?"
             )
             [toSql $ mId m]
-        pure ()
     , getMigrations = do
         results <-
-          quickQuery' conn (cs $ "SELECT migration_id FROM " <> migrationTableName) []
+          quickQuery' conn (cs $ "SELECT migration_id FROM " <> installedMigrations) []
         pure $ map (fromSql . head) results
     , commitBackend = commit conn
     , rollbackBackend = rollback conn
