@@ -98,6 +98,9 @@ executables:
     dependencies:
       - HDBC-sqlite3
       - dbmigrations
+    when:
+      - condition: ! "!(flag(sqlite))"
+        buildable: false
 
 tests:
   spec:
@@ -126,3 +129,22 @@ tests:
       - HDBC-sqlite3
       - dbmigrations
       - hspec
+    when:
+      - condition: ! "!(flag(sqlite))"
+        buildable: false
+
+flags:
+  sqlite:
+    description: Build the sqlite executable (and tests)
+    manual: false
+    default: false
+
+  mysql:
+    description: Build the mysql executable (and tests) application
+    manual: false
+    default: false
+
+  postgresql:
+    description: Build the postgresql executable (and tests) application
+    manual: false
+    default: false

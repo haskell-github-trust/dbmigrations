@@ -46,6 +46,21 @@ source-repository head
   type: git
   location: https://github.com/haskell-github-trust/dbmigrations
 
+flag mysql
+  description: Build the mysql executable (and tests) application
+  manual: False
+  default: False
+
+flag postgresql
+  description: Build the postgresql executable (and tests) application
+  manual: False
+  default: False
+
+flag sqlite
+  description: Build the sqlite executable (and tests)
+  manual: False
+  default: False
+
 library
   exposed-modules:
       Database.Schema.Migrations
@@ -154,6 +169,8 @@ executable dbm-sqlite
     ghc-options: -Wno-missing-kind-signatures
   if impl(ghc >= 8.10)
     ghc-options: -Wno-missing-safe-haskell-mode
+  if !(flag(sqlite))
+    buildable: False
 
 test-suite spec
   type: exitcode-stdio-1.0
@@ -261,3 +278,5 @@ test-suite sqlite-spec
     ghc-options: -Wno-missing-kind-signatures
   if impl(ghc >= 8.10)
     ghc-options: -Wno-missing-safe-haskell-mode
+  if !(flag(sqlite))
+    buildable: False
