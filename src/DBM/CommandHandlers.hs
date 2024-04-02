@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
-module Moo.CommandHandlers
+module DBM.CommandHandlers
   ( newCommand
   , upgradeCommand
   , upgradeListCommand
@@ -17,6 +17,8 @@ import Prelude
 import Control.Monad (forM_, unless, when)
 import Control.Monad.Reader (asks)
 import Control.Monad.Trans (liftIO)
+import DBM.CommandUtils
+import DBM.Core
 import Data.Maybe (isJust)
 import Data.String.Conversions (cs)
 import Data.Time.Clock qualified as Clock
@@ -24,8 +26,6 @@ import Database.Schema.Migrations
 import Database.Schema.Migrations.Backend
 import Database.Schema.Migrations.Migration
 import Database.Schema.Migrations.Store hiding (getMigrations)
-import Moo.CommandUtils
-import Moo.Core
 import System.Exit (ExitCode (..), exitSuccess, exitWith)
 
 newCommand :: CommandHandler

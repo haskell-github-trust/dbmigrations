@@ -1,6 +1,6 @@
--- | This module defines the MOO command interface, the commnad line options
+-- | This module defines the DBM command interface, the commnad line options
 --  parser, and helpers to manipulate the Command data structure.
-module Moo.CommandInterface
+module DBM.CommandInterface
   ( commands
   , commandOptionUsage
   , findCommand
@@ -10,9 +10,9 @@ module Moo.CommandInterface
 
 import Prelude
 
+import DBM.CommandHandlers
+import DBM.Core
 import Data.Maybe
-import Moo.CommandHandlers
-import Moo.Core
 import System.Console.GetOpt
 
 -- | The available commands; used to dispatch from the command line and

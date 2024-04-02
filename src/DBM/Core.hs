@@ -1,4 +1,4 @@
-module Moo.Core
+module DBM.Core
   ( AppT
   , CommandHandler
   , CommandOptions (..)
@@ -67,9 +67,9 @@ data Configuration = Configuration
   }
   deriving stock (Show)
 
--- | A value of type ExecutableParameters is what a moo executable (moo-postgresql,
---  |moo-mysql, etc.) pass to the core package when they want to execute a
---  |command.
+-- | A value of type ExecutableParameters is what a DBM executable
+-- (dbm-postgresql, dbm-mysql, etc.) pass to the core package when they want to
+-- execute a command.
 data ExecutableParameters = ExecutableParameters
   { _parametersBackend :: Backend
   , _parametersMigrationStorePath :: FilePath
@@ -79,7 +79,7 @@ data ExecutableParameters = ExecutableParameters
   deriving stock (Show)
 
 defConfigFile :: String
-defConfigFile = "moo.cfg"
+defConfigFile = "dbm.cfg"
 
 newLoadConfig :: LoadConfig
 newLoadConfig = LoadConfig Nothing Nothing Nothing Nothing

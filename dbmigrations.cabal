@@ -22,9 +22,9 @@ extra-source-files:
     tests/example_store/update2
     tests/config_loading/cfg1.cfg
     tests/config_loading/cfg_ts.cfg
+    tests/config_loading/dbm.cfg
     tests/config_loading/invalid.cfg
     tests/config_loading/missing.cfg
-    tests/config_loading/moo.cfg
     tests/migration_parsing/invalid_field_name.txt
     tests/migration_parsing/invalid_missing_required_fields.txt
     tests/migration_parsing/invalid_syntax.txt
@@ -68,11 +68,11 @@ library
       Database.Schema.Migrations.Migration
       Database.Schema.Migrations.Store
       Database.Schema.Migrations.Test.BackendTest
-      Moo.CommandHandlers
-      Moo.CommandInterface
-      Moo.CommandUtils
-      Moo.Core
-      Moo.Main
+      DBM.CommandHandlers
+      DBM.CommandInterface
+      DBM.CommandUtils
+      DBM.Core
+      DBM.Main
   other-modules:
       Paths_dbmigrations
   hs-source-dirs:

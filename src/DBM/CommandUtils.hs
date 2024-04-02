@@ -1,4 +1,4 @@
-module Moo.CommandUtils
+module DBM.CommandUtils
   ( apply
   , confirmCreation
   , interactiveAskDeps
@@ -14,6 +14,7 @@ import Control.Exception (finally)
 import Control.Monad (forM_, unless, when)
 import Control.Monad.Reader (asks)
 import Control.Monad.Trans (liftIO)
+import DBM.Core
 import Data.Foldable (for_)
 import Data.List (intercalate, isPrefixOf, sortBy)
 import Data.Maybe (fromJust, isJust)
@@ -29,7 +30,6 @@ import Database.Schema.Migrations.Store
   , storeLookup
   , storeMigrations
   )
-import Moo.Core
 import System.Exit (ExitCode (..), exitWith)
 import System.IO
   ( BufferMode (..)

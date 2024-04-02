@@ -102,6 +102,7 @@ executables:
       - condition: ! "!(flag(sqlite))"
         buildable: false
 
+  # TODO: HDBC-mysql fails to compile
   # dbm-mysql:
   #   source-dirs: mysql/app
   #   ghc-options: -threaded -rtsopts "-with-rtsopts=-N"

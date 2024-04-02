@@ -2,8 +2,8 @@ module Main (main) where
 
 import Prelude
 
+import DBM.Main
 import Database.HDBC.PostgreSQL (connectPostgreSQL)
-import Moo.Main
 
 main :: IO ()
 main = hdbcMain connectPostgreSQL

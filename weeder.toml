@@ -2,8 +2,8 @@ roots = [
   "^Database\\.Schema\\.Migrations\\.Backend\\.HDBC\\.hdbcBackend$",
   "^Database\\.Schema\\.Migrations\\.Test\\.BackendTest\\..*$",
   "^Main\\.main$",
-  "^Moo\\.Core\\.makeParameters$",
-  "^Moo\\.Main\\..*$",
+  "^DBM\\.Core\\.makeParameters$",
+  "^DBM\\.Main\\..*$",
   "^Paths_dbmigrations\\..*$",
   "^Spec\\.main$"
 ]

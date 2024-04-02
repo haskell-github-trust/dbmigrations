@@ -1,4 +1,4 @@
-module Moo.Main
+module DBM.Main
   ( hdbcMain
   , mainWithParameters
   , ExecutableParameters (..)
@@ -14,6 +14,8 @@ import Prelude
 
 import Control.Monad (forM_, when)
 import Control.Monad.Reader (runReaderT)
+import DBM.CommandInterface
+import DBM.Core
 import Data.String.Conversions (cs)
 import Data.Text (Text)
 import Database.HDBC (IConnection, SqlError, catchSql, seErrorMsg)
@@ -23,8 +25,6 @@ import Database.Schema.Migrations.Filesystem
   , filesystemStore
   )
 import Database.Schema.Migrations.Store
-import Moo.CommandInterface
-import Moo.Core
 import System.Environment (getArgs, getProgName)
 import System.Exit
 

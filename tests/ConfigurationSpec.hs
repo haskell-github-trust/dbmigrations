@@ -8,8 +8,8 @@ where
 import Prelude
 
 import Common
+import DBM.Core
 import Data.Either (isLeft, isRight)
-import Moo.Core
 import System.Directory
 import System.Environment (setEnv, unsetEnv)
 import Test.Hspec

@@ -4,7 +4,7 @@ This package contains a library for the creation, management, and installation
 of schema updates (called "migrations") for a relational database. In
 particular, this package lets the migration author express explicit dependencies
 between migrations. This library is accompanied by a number database-specific
-packages that contain the management tools to automatically install or revert
+executables that contain the management tools to automatically install or revert
 migrations accordingly.
 
 This package operates on two logical entities:
@@ -18,35 +18,48 @@ This package operates on two logical entities:
 
 ## Getting started
 
-To get started, install the right database-specific dbmigrations package for
-your database. Current options are:
+To get started, install with the right database-specific flag for your database.
 
-- `dbmigrations-postgresql`
-- `dbmigrations-mysql`
-- `dbmigrations-sqlite`
+```console
+stack install dbmigrations --flag dbmigrations:<backend>
+```
 
-Each package provides a CLI suitable for the given backend.
+Then run the database-specific executable that was installed.
 
-The database type-specific packages that work as a companion to this library
-contain tools called `moo-postgresql`, `moo-mysql`, `moo-sqlite`, etc. They are
-responsible for creating, installing, and reverting migrations in your database
-backend. Since all of these command line tools offer the exact same interface,
+```console
+dbm-<backend> help
+```
+
+For example,
+
+```console
+stack install dbmigrations --flag dbmigrations:postgresql
+```
+
+```console
+dbm-postgresql help
+```
+
+Available backends are:
+
+- `sqlite`
+- ~~`mysql`~~ _temporarily disabled due to upstream issue_
+- `postgresql`
+
+Since all of `dbm-<backend>` command line tools offer the exact same interface,
 they are described here in a single document. The executables mentioned above
-are simply called `moo` for the rest of this document. That is, given an example
-that reads as `moo command` you actually have to execute `moo-postgresql
-command` or `moo-mysql command` and so on.
+are simply called `dbm` for the rest of this document. That is, given an example
+that reads as `dbm command` you actually have to execute `dbm-postgresql
+command` or `dbm-mysql command` and so on.
 
-At present, MySQL, PostgreSQL and Sqlite3 are the only supported database
-backends.
-
-The moo tools work by creating migration files in a specific location, called a
+The DBM tools work by creating migration files in a specific location, called a
 migration store, on your filesystem. This directory is where all possible
-migrations for your project will be kept. Moo allows you to create migrations
-that depend on each other. When you use moo to upgrade your database schema, it
+migrations for your project will be kept. DBM allows you to create migrations
+that depend on each other. When you use DBM to upgrade your database schema, it
 determines which migrations are missing, what their dependencies are, and
 installs the required migrations in the correct order (based on dependencies).
 
-Moo works by prompting you for new migration information. It then creates a
+DBM works by prompting you for new migration information. It then creates a
 migration YAML file (whose format is described below), which you then edit by
 hand.
 
@@ -55,8 +68,6 @@ migrations is tracked by way of a migration table that is installed into your
 database.
 
 ## Example
-
-_In the examples below, replace any `moo` command shown with `moo-<backend>`._
 
 1. Create a directory in which to store migration files.
 
@@ -68,7 +79,7 @@ _In the examples below, replace any `moo` command shown with `moo-<backend>`._
    depend on the database type, see the "Environment" documentation section for
    more information.
 
-4. Run `moo upgrade`. This command will not actually install any migrations,
+4. Run `dbm upgrade`. This command will not actually install any migrations,
    since you have not created any, but it will attempt to connect to your
    database and install a migration-tracking table.
 
@@ -78,10 +89,10 @@ _In the examples below, replace any `moo` command shown with `moo-<backend>`._
    Database is up to date.
    ```
 
-5. Create a migration with `moo new`. Here is an example output:
+5. Create a migration with `dbm new`. Here is an example output:
 
    ```console
-   % moo new hello-world
+   % dbm new hello-world
    Selecting dependencies for new migration: hello-world
 
    Confirm: create migration 'hello-world'
@@ -90,7 +101,7 @@ _In the examples below, replace any `moo` command shown with `moo-<backend>`._
    Migration created successfully: ".../hello-world.yml"
    ```
 
-6. Edit the migration you created. In this case, moo created a file
+6. Edit the migration you created. In this case, DBM created a file
    `$DBM_MIGRATION_STORE/hello_world.yml` that looks like this:
 
    ```yaml
@@ -115,46 +126,46 @@ _In the examples below, replace any `moo` command shown with `moo-<backend>`._
      DROP TABLE foo;
    ```
 
-7. Test the new migration with `moo test`. This will install the migration in a
+7. Test the new migration with `dbm test`. This will install the migration in a
    transaction and roll it back. Here is example output:
 
    ```console
-   % moo test hello-world
+   % dbm test hello-world
    Applying: hello-world... done.
    Reverting: hello-world... done.
    Successfully tested migrations.
    ```
 
 <!-- prettier-ignore-start -->
-<!-- it gets confused on the line-break-within-code of moo upgrade -->
+<!-- it gets confused on the line-break-within-code of dbm upgrade -->
 
-8. Install the migration. This can be done in one of two ways: with `moo
-   upgrade` or with `moo apply`. Here are examples:
+8. Install the migration. This can be done in one of two ways: with `dbm
+   upgrade` or with `dbm apply`. Here are examples:
 
 
    ```console
-   % moo apply hello-world
+   % dbm apply hello-world
    Applying: hello-world... done.
    Successfully applied migrations.
 
-   % moo upgrade
+   % dbm upgrade
    Applying: hello-world... done.
    Database successfully upgraded.
    ```
 
 <!-- prettier-ignore-end -->
 
-9. List installed migrations with `moo list`.
+9. List installed migrations with `dbm list`.
 
    ```console
-   % moo list
+   % dbm list
    hello-world
    ```
 
 10. Revert the migration.
 
     ```console
-    % moo revert hello-world
+    % dbm revert hello-world
     Reverting: hello-world... done.
     Successfully reverted migrations.
     ```
@@ -162,14 +173,14 @@ _In the examples below, replace any `moo` command shown with `moo-<backend>`._
 11. List migrations that have not been installed.
 
     ```console
-    % moo upgrade-list
+    % dbm upgrade-list
     Migrations to install:
       hello-world
     ```
 
 ## Configuration File Format
 
-All moo commands accept a `--config-file` option which you can use to specify
+All DBM commands accept a `--config-file` option which you can use to specify
 the path to a configuration file containing your settings. This approach is an
 alternative to setting environment variables. The configuration file format uses
 the same environment variable names for its fields. An example configuration is
@@ -182,8 +193,8 @@ DBM_LINEAR_MIGRATIONS = on/off (or true/false; defaults to off)
 DBM_TIMESTAMP_FILENAMES = on/off (or true/false; defaults to off)
 ```
 
-Alternatively, you may save your settings to `moo.cfg` file in the current
-directory (probably a project root) and moo will load it automatically, if
+Alternatively, you may save your settings to `dbm.cfg` file in the current
+directory (probably a project root) and DBM will load it automatically, if
 present. Specifying `--config-file` disables this behavior.
 
 If you use a config file (either the default one or the one specified with
@@ -250,7 +261,7 @@ treatment of this behavior, see the YAML spec.
 
 ## Environment
 
-Moo depends on these environment variables / configuration file
+DBM depends on these environment variables / configuration file
 settings:
 
 ```
@@ -284,10 +295,10 @@ DBM_DATABASE
 DBM_MIGRATION_STORE
 
   The path to the filesystem directory where your migrations will be
-  kept. moo will create new migrations in this directory and use
+  kept. DBM will create new migrations in this directory and use
   the migrations in this directory when updating the database
   schema. Initially, you'll probably set this to an extant (but
-  empty) directory. moo will not create it for you.
+  empty) directory. DBM will not create it for you.
 
 DBM_LINEAR_MIGRATIONS
 
@@ -313,12 +324,12 @@ DBM_TIMESTAMP_FILENAMES
   apply <migration name>: apply the specified migration (and its
     dependencies) to the database. This operation will be performed
     in a single transaction which will be rolled back if an error
-    occurs. moo will output updates as each migration is applied.
+    occurs. DBM will output updates as each migration is applied.
 
   revert <migration name>: revert the specified migration (and its
     reverse dependencies -- the migrations which depend on it) from
     the database. This operation will be performed in a single
-    transaction which will be rolled back if an error occurs. moo
+    transaction which will be rolled back if an error occurs. DBM
     will output updates as each migration is reverted.
 
   test <migration name>: once you've created a migration, you might
@@ -351,7 +362,7 @@ DBM_TIMESTAMP_FILENAMES
 ## Linear Migrations
 
 If you know that every migration needs to depend on all previous ones, consider
-enabling this feature. When enabled, `moo new` will automatically select
+enabling this feature. When enabled, `dbm new` will automatically select
 smallest subset of existing migrations that will make the new one indirectly
 depend on every other already in the store. This in turn makes the store
 linear-ish (in terms of order of execution) and helps managing the migrations by

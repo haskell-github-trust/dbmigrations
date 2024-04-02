@@ -8,13 +8,13 @@ where
 import Prelude
 
 import Control.Monad.Reader (runReaderT)
+import DBM.CommandHandlers
+import DBM.Core
 import Data.Either (isRight)
 import Data.Text (Text)
 import Database.Schema.Migrations.Migration
 import Database.Schema.Migrations.Store
 import InMemoryStore
-import Moo.CommandHandlers
-import Moo.Core
 import Test.Hspec
 
 spec :: Spec
