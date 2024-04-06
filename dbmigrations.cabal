@@ -5,7 +5,7 @@ cabal-version: 1.18
 -- see: https://github.com/sol/hpack
 
 name:           dbmigrations
-version:        2.1.0
+version:        3.0.0
 synopsis:       An implementation of relational database "migrations"
 description:    Please see <https://github.com/haskell-github-trust/dbmigrations#readme>
 category:       Database
