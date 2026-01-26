@@ -3,7 +3,7 @@ version: 3.0.0
 synopsis: An implementation of relational database "migrations"
 description: Please see <https://github.com/haskell-github-trust/dbmigrations#readme>
 author: "Jonathan Daugherty <cygnus@foobox.com>"
-maintainer: "Pat Brisbin <pbrisbin@gmail.com>"
+maintainer: "Pat Brisbin <pbrisbin@gmail.com>, Kris Nuttycombe <kris@nutty.land>"
 category: Database
 github: haskell-github-trust/dbmigrations
 license: BSD3

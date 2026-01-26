@@ -25,6 +25,7 @@ spec = do
                           , "invalid_syntax"
                           , "invalid_timestamp"
                           , "valid_full"
+                          , "valid_full_fractional_ts"
                           , "valid_no_depends"
                           , "valid_no_desc"
                           , "valid_no_revert"

@@ -34,6 +34,10 @@ spec = do
     it "fully valid" $ do
       migrationFromFile' "valid_full" `shouldReturn` Right validFull
 
+    it "fully valid with fractional seconds in timestamp" $ do
+      migrationFromFile' "valid_full_fractional_ts"
+        `shouldReturn` Right (validFullFractionalTs {mId = "valid_full_fractional_ts"})
+
     it "comments" $ do
       migrationFromFile' "valid_with_comments"
         `shouldReturn` Right (validFull {mId = "valid_with_comments"})
@@ -154,3 +158,17 @@ ts = read tsStr
 
 tsStr :: String
 tsStr = "2009-04-15 10:02:06 UTC"
+
+validFullFractionalTs :: Migration
+validFullFractionalTs =
+  Migration
+    { mTimestamp = Just tsFractional
+    , mId = "valid_full_fractional_ts"
+    , mDesc = Just "A valid full migration with fractional seconds."
+    , mDeps = ["another_migration"]
+    , mApply = "CREATE TABLE test ( a int );"
+    , mRevert = Just "DROP TABLE test;"
+    }
+
+tsFractional :: UTCTime
+tsFractional = read "2009-04-15 10:02:06.123456 UTC"
