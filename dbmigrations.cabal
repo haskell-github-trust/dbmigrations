@@ -12,7 +12,7 @@ category:       Database
 homepage:       https://github.com/haskell-github-trust/dbmigrations#readme
 bug-reports:    https://github.com/haskell-github-trust/dbmigrations/issues
 author:         Jonathan Daugherty <cygnus@foobox.com>
-maintainer:     Pat Brisbin <pbrisbin@gmail.com>
+maintainer:     Pat Brisbin <pbrisbin@gmail.com>, Kris Nuttycombe <kris@nutty.land>
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
