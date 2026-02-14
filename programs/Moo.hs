@@ -1,6 +1,6 @@
 module Main
-    ( main
-    )
+  ( main
+  )
 where
 
 import Prelude
@@ -14,4 +14,3 @@ main = do
     \dbmigrations-mysql, or dbmigrations-sqlite. These packages contain \
     \database-specific executables that replace the former moo executable from the \
     \dbmigrations package."
-

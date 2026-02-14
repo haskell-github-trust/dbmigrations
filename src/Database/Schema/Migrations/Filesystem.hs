@@ -1,44 +1,49 @@
-{-# LANGUAGE DeriveDataTypeable, DeriveGeneric, LambdaCase, ScopedTypeVariables, OverloadedStrings #-}
--- |This module provides a type for interacting with a
--- filesystem-backed 'MigrationStore'.
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
+-- | This module provides a type for interacting with a
+--  filesystem-backed 'MigrationStore'.
 module Database.Schema.Migrations.Filesystem
-    ( FilesystemStoreSettings(..)
-    , migrationFromFile
-    , migrationFromPath
-    , filesystemStore
-    )
+  ( FilesystemStoreSettings (..)
+  , migrationFromFile
+  , migrationFromPath
+  , filesystemStore
+  )
 where
 
 import Prelude
 
-import System.Directory ( getDirectoryContents, doesFileExist )
-import System.FilePath ( (</>), takeExtension, dropExtension, takeBaseName )
-import Data.Text ( Text )
-import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as BSC
-import Data.String.Conversions ( cs, (<>) )
+import Data.String.Conversions (cs, (<>))
+import Data.Text (Text)
+import qualified Data.Text as T
+import System.Directory (doesFileExist, getDirectoryContents)
+import System.FilePath (dropExtension, takeBaseName, takeExtension, (</>))
 
-import Data.Typeable ( Typeable )
-import Data.Time.Clock ( UTCTime )
-import Data.Time ( defaultTimeLocale, formatTime, parseTimeM )
 import qualified Data.Map as Map
+import Data.Time (defaultTimeLocale, formatTime, parseTimeM)
+import Data.Time.Clock (UTCTime)
+import Data.Typeable (Typeable)
 
-import Control.Monad ( filterM )
-import Control.Exception ( Exception(..), throw, catch )
+import Control.Exception (Exception (..), catch, throw)
+import Control.Monad (filterM)
 
 import Data.Aeson
 import Data.Aeson.Types (typeMismatch)
 import qualified Data.Yaml as Yaml
 import GHC.Generics (Generic)
 
-import Database.Schema.Migrations.Migration (Migration(..))
 import Database.Schema.Migrations.Filesystem.Serialize
+import Database.Schema.Migrations.Migration (Migration (..))
 import Database.Schema.Migrations.Store
 
-data FilesystemStoreSettings = FSStore { storePath :: FilePath }
+data FilesystemStoreSettings = FSStore {storePath :: FilePath}
 
 data FilesystemStoreError = FilesystemStoreError String
-                            deriving (Show, Typeable)
+  deriving (Show, Typeable)
 
 instance Exception FilesystemStoreError
 
@@ -53,21 +58,20 @@ filenameExtensionTxt = ".txt"
 
 filesystemStore :: FilesystemStoreSettings -> MigrationStore
 filesystemStore s =
-    MigrationStore { fullMigrationName = fmap addNewMigrationExtension . fsFullMigrationName s
-
-                   , loadMigration = \theId -> migrationFromFile s theId
-
-                   , getMigrations = do
-                       contents <- getDirectoryContents $ storePath s
-                       let migrationFilenames = [ f | f <- contents, isMigrationFilename f ]
-                           fullPaths = [ (f, storePath s </> f) | f <- migrationFilenames ]
-                       existing <- filterM (\(_, full) -> doesFileExist full) fullPaths
-                       return [ cs $ dropExtension short | (short, _) <- existing ]
-
-                   , saveMigration = \m -> do
-                       filename <- fsFullMigrationName s $ mId m
-                       BSC.writeFile (cs $ addNewMigrationExtension filename) $ serializeMigration m
-                   }
+  MigrationStore
+    { fullMigrationName = fmap addNewMigrationExtension . fsFullMigrationName s
+    , loadMigration = \theId -> migrationFromFile s theId
+    , getMigrations = do
+        contents <- getDirectoryContents $ storePath s
+        let
+          migrationFilenames = [f | f <- contents, isMigrationFilename f]
+          fullPaths = [(f, storePath s </> f) | f <- migrationFilenames]
+        existing <- filterM (\(_, full) -> doesFileExist full) fullPaths
+        return [cs $ dropExtension short | (short, _) <- existing]
+    , saveMigration = \m -> do
+        filename <- fsFullMigrationName s $ mId m
+        BSC.writeFile (cs $ addNewMigrationExtension filename) $ serializeMigration m
+    }
 
 addNewMigrationExtension :: FilePath -> FilePath
 addNewMigrationExtension path = path <> filenameExtension
@@ -75,63 +79,71 @@ addNewMigrationExtension path = path <> filenameExtension
 addMigrationExtension :: FilePath -> String -> FilePath
 addMigrationExtension path ext = path <> ext
 
--- |Build path to migrations without extension.
+-- | Build path to migrations without extension.
 fsFullMigrationName :: FilesystemStoreSettings -> Text -> IO FilePath
 fsFullMigrationName s name = return $ storePath s </> cs name
 
 isMigrationFilename :: String -> Bool
 isMigrationFilename path = (cs $ takeExtension path) `elem` [filenameExtension, filenameExtensionTxt]
 
--- |Given a store and migration name, read and parse the associated
--- migration and return the migration if successful.  Otherwise return
--- a parsing error message.
-migrationFromFile :: FilesystemStoreSettings -> Text -> IO (Either String Migration)
+-- | Given a store and migration name, read and parse the associated
+--  migration and return the migration if successful.  Otherwise return
+--  a parsing error message.
+migrationFromFile
+  :: FilesystemStoreSettings -> Text -> IO (Either String Migration)
 migrationFromFile store name =
-    fsFullMigrationName store (cs name) >>= migrationFromPath
+  fsFullMigrationName store (cs name) >>= migrationFromPath
 
--- |Given a filesystem path, read and parse the file as a migration
--- return the 'Migration' if successful.  Otherwise return a parsing
--- error message.
+-- | Given a filesystem path, read and parse the file as a migration
+--  return the 'Migration' if successful.  Otherwise return a parsing
+--  error message.
 migrationFromPath :: FilePath -> IO (Either String Migration)
 migrationFromPath path = do
   let name = cs $ takeBaseName path
-  (Right <$> process name) `catch` (\(FilesystemStoreError s) -> return $ Left $ "Could not parse migration " ++ path ++ ":" ++ s)
+  (Right <$> process name)
+    `catch` ( \(FilesystemStoreError s) -> return $ Left $ "Could not parse migration " ++ path ++ ":" ++ s
+            )
+ where
+  readMigrationFile = do
+    ymlExists <- doesFileExist (addNewMigrationExtension path)
+    if ymlExists
+      then
+        Yaml.decodeFileThrow (addNewMigrationExtension path)
+          `catch` (\(e :: Yaml.ParseException) -> throwFS $ show e)
+      else
+        Yaml.decodeFileThrow (addMigrationExtension path filenameExtensionTxt)
+          `catch` (\(e :: Yaml.ParseException) -> throwFS $ show e)
 
-  where
-    readMigrationFile = do
-      ymlExists <- doesFileExist (addNewMigrationExtension path)
-      if ymlExists
-        then Yaml.decodeFileThrow (addNewMigrationExtension path) `catch` (\(e::Yaml.ParseException) -> throwFS $ show e)
-        else Yaml.decodeFileThrow (addMigrationExtension path filenameExtensionTxt) `catch` (\(e::Yaml.ParseException) -> throwFS $ show e)
-
-    process name = migrationYamlToMigration name <$> readMigrationFile
+  process name = migrationYamlToMigration name <$> readMigrationFile
 
 -- | TODO: re-use this for the generation side too
 data MigrationYaml = MigrationYaml
-    { myCreated :: Maybe UTCTimeYaml
-    , myDescription :: Maybe Text
-    , myApply :: Text
-    , myRevert :: Maybe Text
-    , myDepends :: DependsYaml
-    }
-    deriving Generic
+  { myCreated :: Maybe UTCTimeYaml
+  , myDescription :: Maybe Text
+  , myApply :: Text
+  , myRevert :: Maybe Text
+  , myDepends :: DependsYaml
+  }
+  deriving (Generic)
 
 instance FromJSON MigrationYaml where
-    parseJSON = genericParseJSON jsonOptions
+  parseJSON = genericParseJSON jsonOptions
 
 instance ToJSON MigrationYaml where
-    toJSON = genericToJSON jsonOptions
-    toEncoding = genericToEncoding jsonOptions
+  toJSON = genericToJSON jsonOptions
+  toEncoding = genericToEncoding jsonOptions
 
 jsonOptions :: Options
-jsonOptions = defaultOptions
+jsonOptions =
+  defaultOptions
     { fieldLabelModifier = drop 2 -- remove "my" prefix
     , omitNothingFields = True
     , rejectUnknownFields = True
     }
 
 migrationYamlToMigration :: Text -> MigrationYaml -> Migration
-migrationYamlToMigration theId my = Migration
+migrationYamlToMigration theId my =
+  Migration
     { mTimestamp = unUTCTimeYaml <$> myCreated my
     , mId = theId
     , mDesc = myDescription my
@@ -141,37 +153,38 @@ migrationYamlToMigration theId my = Migration
     }
 
 newtype UTCTimeYaml = UTCTimeYaml
-    { unUTCTimeYaml :: UTCTime
-    }
+  { unUTCTimeYaml :: UTCTime
+  }
 
 instance FromJSON UTCTimeYaml where
-    parseJSON = withText "UTCTime"
-        $ maybe (fail "Unable to parse UTCTime") (pure . UTCTimeYaml)
+  parseJSON =
+    withText "UTCTime" $
+      maybe (fail "Unable to parse UTCTime") (pure . UTCTimeYaml)
         . parseTimeM True defaultTimeLocale utcTimeYamlFormat
         . cs
 
 instance ToJSON UTCTimeYaml where
-    toJSON = toJSON . formatTime defaultTimeLocale utcTimeYamlFormat . unUTCTimeYaml
-    toEncoding = toEncoding . formatTime defaultTimeLocale utcTimeYamlFormat . unUTCTimeYaml
+  toJSON = toJSON . formatTime defaultTimeLocale utcTimeYamlFormat . unUTCTimeYaml
+  toEncoding = toEncoding . formatTime defaultTimeLocale utcTimeYamlFormat . unUTCTimeYaml
 
 -- Keeps things as the old Show/Read-based format, e.g "2009-04-15 10:02:06 UTC"
 utcTimeYamlFormat :: String
 utcTimeYamlFormat = "%F %T%Q UTC"
 
 newtype DependsYaml = DependsYaml
-    { unDependsYaml :: [Text]
-    }
+  { unDependsYaml :: [Text]
+  }
 
 instance FromJSON DependsYaml where
-    parseJSON = \case
-        Null -> pure $ DependsYaml []
-        String t -> pure $ DependsYaml $ T.words t
-        x -> typeMismatch "Null or whitespace-separated String" x
+  parseJSON = \case
+    Null -> pure $ DependsYaml []
+    String t -> pure $ DependsYaml $ T.words t
+    x -> typeMismatch "Null or whitespace-separated String" x
 
 instance ToJSON DependsYaml where
-    toJSON (DependsYaml ts) = case ts of
-        [] -> toJSON Null
-        _ -> toJSON $ T.unwords ts
-    toEncoding (DependsYaml ts) = case ts of
-        [] -> toEncoding Null
-        _ -> toEncoding $ T.unwords ts
+  toJSON (DependsYaml ts) = case ts of
+    [] -> toJSON Null
+    _ -> toJSON $ T.unwords ts
+  toEncoding (DependsYaml ts) = case ts of
+    [] -> toEncoding Null
+    _ -> toEncoding $ T.unwords ts
