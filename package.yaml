@@ -1,0 +1,199 @@
+name: dbmigrations
+version: 3.0.0
+synopsis: An implementation of relational database "migrations"
+description: Please see <https://github.com/haskell-github-trust/dbmigrations#readme>
+author: "Jonathan Daugherty <cygnus@foobox.com>"
+maintainer: "Pat Brisbin <pbrisbin@gmail.com>"
+category: Database
+github: haskell-github-trust/dbmigrations
+license: BSD3
+license-file: LICENSE
+
+extra-doc-files:
+  - README.md
+  - CHANGELOG.md
+
+extra-source-files:
+  - tests/example_store/*
+  - tests/config_loading/*
+  - tests/migration_parsing/*
+
+ghc-options:
+  - -fwrite-ide-info
+  - -Weverything
+  - -Wno-all-missed-specialisations
+  - -Wno-missed-specialisations
+  - -Wno-missing-exported-signatures # re-enables missing-signatures
+  - -Wno-missing-import-lists
+  - -Wno-missing-local-signatures
+  - -Wno-monomorphism-restriction
+  - -Wno-safe
+  - -Wno-unsafe
+
+when:
+  - condition: "impl(ghc >= 9.2)"
+    ghc-options:
+      - -Wno-missing-kind-signatures
+  - condition: "impl(ghc >= 8.10)"
+    ghc-options:
+      - -Wno-missing-safe-haskell-mode
+
+dependencies:
+  - base < 5
+
+language: GHC2021
+default-extensions:
+  - BangPatterns
+  - DataKinds
+  - DeriveAnyClass
+  - DeriveFoldable
+  - DeriveFunctor
+  - DeriveGeneric
+  - DeriveLift
+  - DeriveTraversable
+  - DerivingStrategies
+  - FlexibleContexts
+  - FlexibleInstances
+  - GADTs
+  - GeneralizedNewtypeDeriving
+  - LambdaCase
+  - MultiParamTypeClasses
+  - NoImplicitPrelude
+  - NoMonomorphismRestriction
+  - OverloadedStrings
+  - RankNTypes
+  - ScopedTypeVariables
+  - StandaloneDeriving
+  - TypeApplications
+  - TypeFamilies
+
+  # Soon after
+  # - DuplicateRecordFields
+  # - NoFieldSelectors
+  # - OverloadedRecordDot
+
+library:
+  source-dirs: src
+  dependencies:
+    - HDBC
+    - aeson
+    - bytestring
+    - configurator
+    - containers
+    - directory
+    - fgl
+    - filepath
+    - hspec
+    - mtl
+    - string-conversions
+    - text
+    - time
+    - yaml
+
+executables:
+  dbm-sqlite:
+    source-dirs: sqlite/app
+    ghc-options: -threaded -rtsopts "-with-rtsopts=-N"
+    main: Main.hs
+    dependencies:
+      - HDBC-sqlite3
+      - dbmigrations
+    when:
+      - condition: ! "!(flag(sqlite))"
+        buildable: false
+
+  # TODO: HDBC-mysql fails to compile
+  # dbm-mysql:
+  #   source-dirs: mysql/app
+  #   ghc-options: -threaded -rtsopts "-with-rtsopts=-N"
+  #   main: Main.hs
+  #   dependencies:
+  #     - HDBC-mysql
+  #     - dbmigrations
+  #   when:
+  #     - condition: ! "!(flag(mysql))"
+  #       buildable: false
+
+  dbm-postgresql:
+    source-dirs: postgresql/app
+    ghc-options: -threaded -rtsopts "-with-rtsopts=-N"
+    main: Main.hs
+    dependencies:
+      - HDBC-postgresql
+      - dbmigrations
+    when:
+      - condition: ! "!(flag(postgresql))"
+        buildable: false
+
+tests:
+  spec:
+    source-dirs: tests
+    ghc-options: -threaded -rtsopts "-with-rtsopts=-N"
+    main: Spec.hs
+    dependencies:
+      - containers
+      - dbmigrations
+      - directory
+      - fgl
+      - filepath
+      - hspec
+      - mtl
+      - string-conversions
+      - template-haskell
+      - text
+      - time
+
+  sqlite-spec:
+    source-dirs: sqlite/tests
+    ghc-options: -threaded -rtsopts "-with-rtsopts=-N"
+    main: Main.hs
+    dependencies:
+      - HDBC
+      - HDBC-sqlite3
+      - dbmigrations
+      - hspec
+    when:
+      - condition: ! "!(flag(sqlite))"
+        buildable: false
+
+  # mysql-spec:
+  #   source-dirs: mysql/tests
+  #   ghc-options: -threaded -rtsopts "-with-rtsopts=-N"
+  #   main: Main.hs
+  #   dependencies:
+  #     - HDBC
+  #     - HDBC-mysql
+  #     - dbmigrations
+  #     - hspec
+  #   when:
+  #     - condition: ! "!(flag(mysql))"
+  #       buildable: false
+
+  postgresql-spec:
+    source-dirs: postgresql/tests
+    ghc-options: -threaded -rtsopts "-with-rtsopts=-N"
+    main: Main.hs
+    dependencies:
+      - HDBC
+      - HDBC-postgresql
+      - dbmigrations
+      - hspec
+    when:
+      - condition: ! "!(flag(postgresql))"
+        buildable: false
+
+flags:
+  sqlite:
+    description: Build the sqlite executable (and tests)
+    manual: false
+    default: false
+
+  # mysql:
+  #   description: Build the mysql executable (and tests) application
+  #   manual: false
+  #   default: false
+
+  postgresql:
+    description: Build the postgresql executable (and tests) application
+    manual: false
+    default: false

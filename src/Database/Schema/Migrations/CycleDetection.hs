@@ -1,20 +1,15 @@
 module Database.Schema.Migrations.CycleDetection
-    ( hasCycle
-    )
+  ( hasCycle
+  )
 where
 
-import Data.Graph.Inductive.Graph
-    ( Graph(..)
-    , Node
-    , nodes
-    , edges
-    )
+import Prelude
 
-import Control.Monad.State ( State, evalState, gets, get, put )
-import Control.Monad ( forM )
-
-import Data.Maybe ( fromJust )
-import Data.List ( findIndex )
+import Control.Monad (forM)
+import Control.Monad.State (State, evalState, get, gets, put)
+import Data.Graph.Inductive.Graph (Graph (..), Node, edges, nodes)
+import Data.List (findIndex)
+import Data.Maybe (fromJust)
 
 data Mark = White | Gray | Black
 type CycleDetectionState = [(Node, Mark)]
@@ -28,10 +23,11 @@ getMark n = gets (fromJust . lookup n)
 
 replace :: [a] -> Int -> a -> [a]
 replace elems index val
-    | index > length elems = error "replacement index too large"
-    | otherwise = (take index elems) ++
-                  [val] ++
-                  (reverse $ take ((length elems) - (index + 1)) $ reverse elems)
+  | index > length elems = error "replacement index too large"
+  | otherwise =
+      take index elems
+        <> [val]
+        <> reverse (take (length elems - (index + 1)) $ reverse elems)
 
 setMark :: Int -> Mark -> State CycleDetectionState ()
 setMark n mark = do
@@ -42,23 +38,26 @@ setMark n mark = do
 hasCycle' :: Graph g => g a b -> State CycleDetectionState Bool
 hasCycle' g = do
   result <- forM (nodes g) $ \n -> do
-                   m <- getMark n
-                   case m of
-                     White -> visit g n
-                     _ -> return False
-  return $ or result
+    m <- getMark n
+    case m of
+      White -> visit g n
+      _ -> pure False
+  pure $ or result
 
 visit :: Graph g => g a b -> Node -> State CycleDetectionState Bool
 visit g n = do
   setMark n Gray
-  result <- forM [ v | (u,v) <- edges g, u == n ] $ \node -> do
-              m <- getMark node
-              case m of
-                Gray -> return True
-                White -> visit g node
-                _ -> return False
-  case or result of
-    True -> return True
-    False -> do
-              setMark n Black
-              return False
+  result <- forM [v | (u, v) <- edges g, u == n] $ \node -> do
+    m <- getMark node
+    case m of
+      Gray -> pure True
+      White -> visit g node
+      _ -> pure False
+  ( if or result
+      then pure True
+      else
+        ( do
+            setMark n Black
+            pure False
+        )
+    )
