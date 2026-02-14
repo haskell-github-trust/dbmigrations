@@ -156,7 +156,7 @@ instance ToJSON UTCTimeYaml where
 
 -- Keeps things as the old Show/Read-based format, e.g "2009-04-15 10:02:06 UTC"
 utcTimeYamlFormat :: String
-utcTimeYamlFormat = "%F %T UTC"
+utcTimeYamlFormat = "%F %T%Q UTC"
 
 newtype DependsYaml = DependsYaml
     { unDependsYaml :: [Text]

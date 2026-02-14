@@ -10,7 +10,8 @@ module Moo.Main
     )
 where
 
-import  Control.Monad.Reader (forM_, runReaderT, when)
+import  Control.Monad (forM_, when)
+import  Control.Monad.Reader (runReaderT)
 import  Database.HDBC (SqlError, catchSql, seErrorMsg)
 import  Prelude  hiding (lookup)
 import  Data.Text (Text)
