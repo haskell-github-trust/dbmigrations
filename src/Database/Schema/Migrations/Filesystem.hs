@@ -11,7 +11,7 @@ where
 import Prelude
 
 import Control.Exception (Exception (..), catch, throw)
-import Control.Monad (filterM)
+import Control.Monad (filterM, msum)
 import Data.Aeson
 import Data.Aeson.Types (typeMismatch)
 import Data.ByteString.Char8 qualified as BSC
@@ -147,18 +147,28 @@ newtype UTCTimeYaml = UTCTimeYaml
 
 instance FromJSON UTCTimeYaml where
   parseJSON =
-    withText "UTCTime" $
-      maybe (fail "Unable to parse UTCTime") (pure . UTCTimeYaml)
-        . parseTimeM True defaultTimeLocale utcTimeYamlFormat
-        . cs
+    withText "UTCTime" $ \t ->
+      let s = cs t
+      in  case msum [parseTimeM True defaultTimeLocale fmt s | fmt <- utcTimeParseFormats] of
+            Nothing -> fail "Unable to parse UTCTime"
+            Just utc -> pure $ UTCTimeYaml utc
 
 instance ToJSON UTCTimeYaml where
-  toJSON = toJSON . formatTime defaultTimeLocale utcTimeYamlFormat . unUTCTimeYaml
-  toEncoding = toEncoding . formatTime defaultTimeLocale utcTimeYamlFormat . unUTCTimeYaml
+  toJSON = toJSON . formatTime defaultTimeLocale utcTimeWriteFormat . unUTCTimeYaml
+  toEncoding = toEncoding . formatTime defaultTimeLocale utcTimeWriteFormat . unUTCTimeYaml
 
--- Keeps things as the old Show/Read-based format, e.g "2009-04-15 10:02:06 UTC"
-utcTimeYamlFormat :: String
-utcTimeYamlFormat = "%F %T%Q UTC"
+-- | Canonical output format: the old Show/Read-based format,
+-- e.g "2009-04-15 10:02:06.123456 UTC"
+utcTimeWriteFormat :: String
+utcTimeWriteFormat = "%F %T%Q UTC"
+
+-- | Accepted input formats, tried in order. Lenient parsing accepts
+-- timestamps with or without fractional seconds.
+utcTimeParseFormats :: [String]
+utcTimeParseFormats =
+  [ "%F %T%Q UTC" -- "2009-04-15 10:02:06.123456 UTC" (with fractional seconds)
+  , "%F %T UTC" -- "2009-04-15 10:02:06 UTC" (without fractional seconds)
+  ]
 
 newtype DependsYaml = DependsYaml
   { unDependsYaml :: [Text]

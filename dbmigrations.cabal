@@ -1,6 +1,6 @@
 cabal-version: 1.18
 
--- This file has been generated from package.yaml by hpack version 0.36.0.
+-- This file has been generated from package.yaml by hpack version 0.38.1.
 --
 -- see: https://github.com/sol/hpack
 
@@ -30,6 +30,7 @@ extra-source-files:
     tests/migration_parsing/invalid_syntax.txt
     tests/migration_parsing/invalid_timestamp.txt
     tests/migration_parsing/valid_full.txt
+    tests/migration_parsing/valid_full_fractional_ts.txt
     tests/migration_parsing/valid_no_depends.txt
     tests/migration_parsing/valid_no_desc.txt
     tests/migration_parsing/valid_no_revert.txt
